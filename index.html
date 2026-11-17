@@ -47,6 +47,7 @@
     textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
     .journal-box{margin:16px 0 18px;border:1px solid var(--border);border-radius:17px;padding:15px;background:var(--card)}
     .journal-meta{font-size:12px;color:var(--muted);line-height:1.6;overflow-wrap:anywhere;margin:9px 0}
+    .unread-comment-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#e85c98;box-shadow:0 0 0 2px var(--card);margin-left:5px;vertical-align:middle;flex-shrink:0}
     .comment-list{display:grid;gap:10px;margin:12px 0}
     .comment-item{border:1px solid var(--border);border-radius:14px;padding:12px;background:var(--bg)}
     .comment-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-bottom:6px}
@@ -171,6 +172,8 @@ const photoSignedCache = new Map();
 let journal = null, comments = [], journalLoadVersion = 0, journalDataDate = '';
 let journalDraftDate = '', journalDirty = false;
 let memoryProfiles = new Map();
+let unreadCommentDates = new Set();
+let unreadLoadVersion = 0;
 
 
 const setText = (id, text) => { $(id).textContent = text; };
@@ -190,7 +193,7 @@ function showLogin(message = '') {
  user = null;
  entries = [];
  photos = []; covers.clear(); photoSignedCache.clear(); ++photoLoadVersion;
- journal=null;comments=[];journalDataDate='';memoryProfiles.clear();++journalLoadVersion;journalDraftDate='';journalDirty=false;
+ journal=null;comments=[];journalDataDate='';unreadCommentDates.clear();++unreadLoadVersion;memoryProfiles.clear();++journalLoadVersion;journalDraftDate='';journalDirty=false;
  ++loadVersion;
  show('login');
  setText('loginError', message);
@@ -219,6 +222,7 @@ function renderCalendar() {
    button.className = 'day' + (date === selected ? ' selected' : '') + (date === dateKey(today) ? ' today' : '') + (cover ? ' has-photo' : '');
    button.setAttribute('aria-label', `${date} 일정 ${count}개`);
    const label = document.createElement('span'); label.textContent = String(n); button.append(label);
+   if (unreadCommentDates.has(date)) { const dot=document.createElement('span');dot.className='unread-comment-dot';dot.title='새 댓글';dot.setAttribute('aria-label','새 댓글');button.append(dot); }
    if (count) { const dot = document.createElement('span'); dot.className = 'dot'; button.append(dot); }
    if (cover) {
      const src = photoSignedCache.get(cover.storage_path)?.url;
@@ -318,6 +322,48 @@ function renderJournal() {
    item.append(head,body);list.append(item);
  }
 }
+
+// V5: 상대방의 새 댓글만 사용자별 읽음 상태와 비교합니다.
+async function loadUnreadComments() {
+ if (!client || !user) return;
+ const run=++unreadLoadVersion, uid=user.id, [from,to]=monthRange();
+ try {
+  const [commentResult, readResult] = await Promise.all([
+   client.from('memory_comments').select('memory_date,created_at,created_by').gte('memory_date',from).lte('memory_date',to).neq('created_by',uid),
+   client.from('memory_comment_reads').select('memory_date,last_read_at').eq('user_id',uid).gte('memory_date',from).lte('memory_date',to)
+  ]);
+  if(commentResult.error)throw commentResult.error;
+  if(readResult.error)throw readResult.error;
+  if(run!==unreadLoadVersion || !user || user.id!==uid)return;
+  const readAt=new Map((readResult.data||[]).map(x=>[x.memory_date,x.last_read_at]));
+  const next=new Set();
+  for(const c of commentResult.data||[]){
+   const last=readAt.get(c.memory_date);
+   if(!last || new Date(c.created_at).getTime()>new Date(last).getTime())next.add(c.memory_date);
+  }
+  unreadCommentDates=next;
+  renderCalendar();
+ } catch(err) { console.warn('댓글 알림 확인 실패:',err.message||err); }
+}
+async function markCommentsRead(date, loadedComments) {
+ if(!client||!user)return;
+ // 읽은 댓글의 최종 생성 시각까지만 표시해, 확인 도중 새로 도착한 댓글은 놓치지 않습니다.
+ const last=(loadedComments||[]).filter(c=>c.created_by!==user.id)
+   .map(c=>c.created_at).sort().at(-1);
+ if(!last)return;
+ const uid=user.id;
+ try {
+  const {data:prior,error:priorError}=await client.from('memory_comment_reads')
+   .select('last_read_at').eq('user_id',uid).eq('memory_date',date).maybeSingle();
+  if(priorError)throw priorError;
+  if(prior && new Date(prior.last_read_at)>=new Date(last))return;
+  const {error}=await client.from('memory_comment_reads').upsert(
+   {user_id:uid,memory_date:date,last_read_at:last},{onConflict:'user_id,memory_date'});
+  if(error)throw error;
+  await loadUnreadComments();
+ } catch(err) {console.warn('댓글 읽음 저장 실패:',err.message||err);}
+}
+
 async function loadJournal() {
  if(!client||!user)return;
  const run=++journalLoadVersion, targetDate=selected;
@@ -340,6 +386,7 @@ async function loadJournal() {
    }
    if(run!==journalLoadVersion||!user||selected!==targetDate)return;
    journal=one.data||null;comments=rows;renderJournal();
+   await markCommentsRead(targetDate, rows);
  }catch(err){if(run===journalLoadVersion)journalMessage('추억 글 불러오기 실패: '+(err.message||'연결 오류'),true);}
 }
 async function saveJournal(e) {
@@ -534,7 +581,7 @@ async function loadEvents() {
    const now = new Date();
    setText('syncStatus', `☁️ 동기화 완료 · ${pad(now.getHours())}:${pad(now.getMinutes())}`);
    renderCalendar(); renderEvents();
-   await Promise.all([loadPhotos(), loadJournal()]);
+   await Promise.all([loadPhotos(), loadJournal(), loadUnreadComments()]);
  } catch (err) {
    if (run !== loadVersion) return;
    setText('syncStatus', '⚠️ 동기화 실패 · 다시 시도해 주세요');
