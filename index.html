@@ -28,6 +28,15 @@
     .week span{text-align:center;padding:9px 0;color:var(--muted);font-size:12px}.day{min-height:70px;padding:8px 1px 5px;border-radius:12px;background:transparent;border:1px solid transparent;display:flex;align-items:center;flex-direction:column;gap:5px;font-size:13px;position:relative}
     .day.today{border-color:var(--accent)} .day.selected{background:var(--subtle)} .day:active{transform:scale(.97)}
     .dot{height:6px;width:6px;border-radius:50%;background:var(--accent)} .count{color:var(--muted);font-size:10px} .empty-day{min-height:70px}
+    .cover-thumb{width:calc(100% - 2px);height:42px;border-radius:7px;object-fit:cover;display:block;margin-top:1px}
+    .day.has-photo{min-height:92px}.day .dot{position:absolute;right:5px;top:10px}
+    .photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .photo-item{position:relative;border:1px solid var(--border);border-radius:15px;overflow:hidden;background:var(--bg)}
+    .photo-item img{display:block;width:100%;height:150px;object-fit:cover}
+    .photo-actions{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:7px;flex-wrap:wrap}
+    .photo-actions button{font-size:12px;padding:7px 9px}
+    .photo-placeholder{height:150px;display:grid;place-items:center;color:var(--muted);font-size:12px;padding:12px;text-align:center}
+    input[type=file]{padding:9px 10px;height:auto;min-height:48px}.photo-help{margin:8px 0 0;font-size:12px;line-height:1.6;color:var(--muted)}
     .entry-list{margin-top:14px}.entry{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0;border-bottom:1px solid var(--border)}
     .entry:last-child{border-bottom:none}.entry-text{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;flex:1}.entry-actions{display:flex;gap:6px}
     .entry-actions button{font-size:12px;padding:8px 10px}.form-row{display:grid;gap:9px;margin-top:8px}
@@ -73,7 +82,19 @@
       </form>
       <div id="status" class="small" role="status" aria-live="polite"></div>
       <div id="events" class="entry-list"></div>
-      <div class="photo-notice">📸 날짜 아래 대표사진은 다음 버전에서 추가할게요.<br>현재는 사진 업로드 기능이 없어요.</div>
+      <div class="photo-notice" style="text-align:left">
+        <h3>📸 이 날의 사진</h3>
+        <p class="photo-help">사진을 여러 장 등록하고, 대표사진 한 장을 달력에 표시해요. 둘만 접근할 수 있는 비공개 저장소를 이용해요.</p>
+        <form id="photoForm" class="form-row">
+          <label class="field" for="photoInput">사진 선택 (한 번에 최대 10장)</label>
+          <input id="photoInput" type="file" accept="image/*" multiple required>
+          <button id="uploadPhotoBtn" class="primary full" type="submit">이 날짜에 사진 올리기 💗</button>
+        </form>
+        <p class="photo-help">용량 절약을 위해 사진은 긴 변 1600px로 줄여 업로드해요. 원본 사진은 휴대폰이나 별도 백업에 보관해 주세요.</p>
+        <p id="photoStatus" class="small" role="status" aria-live="polite"></p>
+        <div id="photoGrid" class="photo-grid"></div>
+        <p class="photo-help">💬 날짜별 댓글은 다음 버전에서 연결할게요.</p>
+      </div>
     </section>
     <section id="importPanel" class="panel" hidden>
       <h3>💌 이전 달력의 일정이 있어요!</h3>
@@ -81,7 +102,7 @@
       <button id="importBtn" class="primary full" type="button">이전 일정 클라우드로 옮기기</button>
       <p class="small muted" style="margin:10px 0 0">가져오기는 직접 누를 때만 진행해요. 기존 휴대폰 기록은 삭제하지 않아요.</p>
     </section>
-    <p class="notice">🔐 일정은 Supabase 로그인과 접근 정책으로 보호돼요. 현재 사진은 연결되지 않았고, 중요한 기록은 별도로 백업해 주세요. 다른 휴대폰의 변경은 약 20초마다 확인해요.</p>
+    <p class="notice">🔐 일정·사진은 로그인과 데이터 접근 정책으로 제한돼요. 사진 URL은 제한 시간 동안만 유효하니 외부에 공유하지 마세요. 소중한 원본은 꼭 따로 백업해 주세요. 앱은 다른 기기의 변경을 주기적으로 확인해요.</p>
     <footer>💕 범이와뚜 · 우리 둘만의 기록</footer>
   </div>
  </main>
@@ -101,6 +122,9 @@ let entries = [];
 let loadingEntries = false;
 let client = null;
 let loadVersion = 0;
+const PHOTO_BUCKET = 'beomddu-photos';
+let photos = [], covers = new Map(), photoLoadVersion = 0, loadingPhotos = false;
+const photoSignedCache = new Map();
 
 const setText = (id, text) => { $(id).textContent = text; };
 function setTheme(dark) {
@@ -118,6 +142,7 @@ function show(section) {
 function showLogin(message = '') {
  user = null;
  entries = [];
+ photos = []; covers.clear(); photoSignedCache.clear(); ++photoLoadVersion;
  ++loadVersion;
  show('login');
  setText('loginError', message);
@@ -139,13 +164,20 @@ function renderCalendar() {
  for (let n = 1; n <= days; n++) {
    const date = dateKey(new Date(month.getFullYear(), month.getMonth(), n));
    const count = entries.filter(e => e.event_date === date).length;
+   const datePhotos = photos.filter(p => p.memory_date === date);
+   const cover = datePhotos.find(p => p.id === covers.get(date)) || datePhotos[0];
    const button = document.createElement('button');
    button.type = 'button';
-   button.className = 'day' + (date === selected ? ' selected' : '') + (date === dateKey(today) ? ' today' : '');
+   button.className = 'day' + (date === selected ? ' selected' : '') + (date === dateKey(today) ? ' today' : '') + (cover ? ' has-photo' : '');
    button.setAttribute('aria-label', `${date} 일정 ${count}개`);
    const label = document.createElement('span'); label.textContent = String(n); button.append(label);
    if (count) { const dot = document.createElement('span'); dot.className = 'dot'; button.append(dot); }
-   button.addEventListener('click', () => { selected = date; renderCalendar(); renderEvents(); });
+   if (cover) {
+     const src = photoSignedCache.get(cover.storage_path)?.url;
+     if (src) { const img=document.createElement('img');img.className='cover-thumb';img.src=src;img.alt=`${date} 대표 사진`;img.loading='lazy';button.append(img); }
+     else {const badge=document.createElement('span');badge.textContent='📸';button.append(badge);}
+   }
+   button.addEventListener('click', () => { selected = date; renderCalendar(); renderEvents(); renderPhotoGallery(); });
    cal.append(button);
  }
 }
@@ -171,6 +203,123 @@ function renderEvents() {
 function monthRange() {
  return [dateKey(new Date(month.getFullYear(),month.getMonth(),1)), dateKey(new Date(month.getFullYear(),month.getMonth()+1,0))];
 }
+function photoMessage(text, bad=false) {
+ const el = $('photoStatus'); el.textContent = text; el.style.color = bad ? '#bd4363' : 'var(--muted)';
+}
+function renderPhotoGallery() {
+ const grid = $('photoGrid'); grid.replaceChildren();
+ const selectedPhotos = photos.filter(p => p.memory_date === selected);
+ if (!selectedPhotos.length) {const p=document.createElement('p'); p.className='small muted'; p.textContent='이 날짜에 사진이 아직 없어요 📷'; grid.append(p); return;}
+ const coverId = covers.get(selected);
+ for (const photo of selectedPhotos) {
+   const item=document.createElement('div');item.className='photo-item';
+   const url=photoSignedCache.get(photo.storage_path)?.url;
+   if (url) {const img=document.createElement('img');img.src=url;img.alt=`${selected} 추억 사진`;img.loading='lazy';item.append(img);}
+   else {const empty=document.createElement('div');empty.className='photo-placeholder';empty.textContent='미리보기를 불러오지 못했어요. 새로고침해 주세요.';item.append(empty);}
+   const actions=document.createElement('div'); actions.className='photo-actions';
+   const cover=document.createElement('button');cover.type='button';
+   cover.textContent=photo.id===coverId?'💗 대표사진':'대표로 선택';
+   cover.disabled=photo.id===coverId;
+   cover.addEventListener('click',()=>setCoverPhoto(photo));
+   const del=document.createElement('button');del.type='button';del.textContent='삭제';
+   del.addEventListener('click',()=>deletePhoto(photo));
+   actions.append(cover,del);item.append(actions);grid.append(item);
+ }
+}
+async function loadPhotos() {
+ if (!client || !user) return;
+ const run=++photoLoadVersion, [from,to]=monthRange();loadingPhotos=true;
+ try {
+   const [pr,cr]=await Promise.all([
+     client.from('memory_photos').select('id,memory_date,storage_path,uploaded_by,created_at')
+       .gte('memory_date',from).lte('memory_date',to).order('created_at',{ascending:true}),
+     client.from('memory_covers').select('memory_date,photo_id').gte('memory_date',from).lte('memory_date',to)
+   ]);
+   if (pr.error) throw pr.error;
+   if (cr.error) throw cr.error;
+   if (run!==photoLoadVersion || !user) return;
+   photos=pr.data||[];covers=new Map((cr.data||[]).map(c=>[c.memory_date,c.photo_id]));
+   await Promise.all(photos.map(async p=>{
+     const cached=photoSignedCache.get(p.storage_path);
+     if (cached && cached.expires>Date.now()) return;
+     const {data,error}=await client.storage.from(PHOTO_BUCKET).createSignedUrl(p.storage_path,3600);
+     if (!error && data?.signedUrl) photoSignedCache.set(p.storage_path,{url:data.signedUrl,expires:Date.now()+45*60*1000});
+   }));
+   if (run!==photoLoadVersion || !user) return;
+   renderCalendar();renderPhotoGallery();
+ } catch(err) {if(run===photoLoadVersion)photoMessage('사진 불러오기 실패: '+(err.message||'연결 오류'),true);}
+ finally {if(run===photoLoadVersion)loadingPhotos=false;}
+}
+function convertPhoto(file) {
+ return new Promise((resolve,reject)=>{
+   if (!file.type.startsWith('image/')) {reject(new Error('이미지 파일만 올릴 수 있어요.'));return;}
+   if (file.size>30*1024*1024) {reject(new Error('원본은 30MB 이하만 선택해 주세요.'));return;}
+   const objectUrl=URL.createObjectURL(file), img=new Image();
+   img.onload=()=>{
+     try {
+       const scale=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight));
+       const canvas=document.createElement('canvas');
+       canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+       canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+       const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+       ctx.drawImage(img,0,0,canvas.width,canvas.height);
+       URL.revokeObjectURL(objectUrl);
+       canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('사진 변환을 완료할 수 없어요.')), 'image/jpeg',0.82);
+     } catch(e){URL.revokeObjectURL(objectUrl);reject(e);}
+   };
+   img.onerror=()=>{URL.revokeObjectURL(objectUrl);reject(new Error('사진을 열지 못했어요. HEIC라면 갤러리에서 JPG로 변환해 주세요.'));};
+   img.src=objectUrl;
+ });
+}
+async function uploadPhotos(e) {
+ e.preventDefault();if(!client||!user)return;
+ const files=Array.from($('photoInput').files||[]);
+ if(!files.length)return;
+ if(files.length>10){photoMessage('한 번에 최대 10장씩 선택해 줘.',true);return;}
+ const btn=$('uploadPhotoBtn'), uploadDate=selected;btn.disabled=true;
+ let completed=0;const errors=[];
+ try {
+   for(let i=0;i<files.length;i++){
+     let path='';photoMessage(`📸 ${i+1}/${files.length}장 올리는 중…`);
+     try {
+       const blob=await convertPhoto(files[i]);
+       if(blob.size>8*1024*1024)throw new Error('압축된 사진이 8MB를 넘어요.');
+       path=`photos/${uploadDate}/${crypto.randomUUID()}.jpg`;
+       const uploaded=await client.storage.from(PHOTO_BUCKET).upload(path,blob,{contentType:'image/jpeg',upsert:false,cacheControl:'3600'});
+       if(uploaded.error)throw uploaded.error;
+       const created=await client.from('memory_photos').insert({memory_date:uploadDate,storage_path:path,uploaded_by:user.id}).select('id').single();
+       if(created.error){await client.storage.from(PHOTO_BUCKET).remove([path]);throw created.error;}
+       completed++;
+       if (completed===1 && !covers.has(uploadDate) && !photos.some(p=>p.memory_date===uploadDate)) {
+         const r=await client.from('memory_covers').upsert({memory_date:uploadDate,photo_id:created.data.id},{onConflict:'memory_date'});
+         if(r.error)errors.push('대표사진 자동 지정 실패(사진은 저장됨)');
+       }
+     }catch(err){errors.push(`${files[i].name}: ${err.message||'오류'}`);}
+   }
+   $('photoInput').value='';
+   photoMessage(`💕 ${completed}장 업로드 완료!`+(errors.length?' 일부 실패: '+errors.join('; '):''),!!errors.length);
+   await loadPhotos();
+ }finally{btn.disabled=false;}
+}
+async function setCoverPhoto(photo) {
+ try{
+  photoMessage('대표사진 저장 중…');
+  const {error}=await client.from('memory_covers').upsert({memory_date:photo.memory_date,photo_id:photo.id},{onConflict:'memory_date'});
+  if(error)throw error;
+  photoMessage('💗 대표사진 변경 완료!');await loadPhotos();
+ }catch(err){photoMessage('대표사진 설정 실패: '+(err.message||'오류'),true);}
+}
+async function deletePhoto(photo){
+ if(!confirm('이 사진을 추억 기록에서 삭제할까? 저장소에서도 삭제돼요.'))return;
+ try {
+   const res=await client.from('memory_photos').delete().eq('id',photo.id);
+   if(res.error)throw res.error;
+   const removed=await client.storage.from(PHOTO_BUCKET).remove([photo.storage_path]);
+   photoSignedCache.delete(photo.storage_path);
+   photoMessage(removed.error?'기록에서는 삭제됐지만 저장소 정리가 필요해요: '+removed.error.message:'사진 삭제 완료 💗',!!removed.error);
+   await loadPhotos();
+ }catch(err){photoMessage('사진 삭제 실패: '+(err.message||'오류'),true);}
+}
 async function loadEvents() {
  if (!user || !client) return;
  const run = ++loadVersion;
@@ -188,6 +337,7 @@ async function loadEvents() {
    const now = new Date();
    setText('syncStatus', `☁️ 동기화 완료 · ${pad(now.getHours())}:${pad(now.getMinutes())}`);
    renderCalendar(); renderEvents();
+   await loadPhotos();
  } catch (err) {
    if (run !== loadVersion) return;
    setText('syncStatus', '⚠️ 동기화 실패 · 다시 시도해 주세요');
@@ -292,11 +442,12 @@ async function signOut() {
 }
 $('loginForm').addEventListener('submit',signIn);
 $('eventForm').addEventListener('submit',addEvent);
+$('photoForm').addEventListener('submit',uploadPhotos);
 $('logoutBtn').addEventListener('click',signOut);
 $('importBtn').addEventListener('click',importOld);
 $('refreshBtn').addEventListener('click',loadEvents);
-$('prevMonth').addEventListener('click',() => { month=new Date(month.getFullYear(),month.getMonth()-1,1); selected=dateKey(month); entries=[]; renderCalendar();renderEvents();loadEvents(); });
-$('nextMonth').addEventListener('click',() => { month=new Date(month.getFullYear(),month.getMonth()+1,1); selected=dateKey(month); entries=[]; renderCalendar();renderEvents();loadEvents(); });
+$('prevMonth').addEventListener('click',() => { month=new Date(month.getFullYear(),month.getMonth()-1,1); selected=dateKey(month); entries=[];photos=[];covers.clear();++photoLoadVersion;renderCalendar();renderEvents();renderPhotoGallery();loadEvents(); });
+$('nextMonth').addEventListener('click',() => { month=new Date(month.getFullYear(),month.getMonth()+1,1); selected=dateKey(month); entries=[];photos=[];covers.clear();++photoLoadVersion;renderCalendar();renderEvents();renderPhotoGallery();loadEvents(); });
 (async function start() {
  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
    $('starting').innerHTML = '<h2>연결 오류</h2><p class="muted small">Supabase 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.</p>';
@@ -318,7 +469,7 @@ $('nextMonth').addEventListener('click',() => { month=new Date(month.getFullYear
    else showLogin();
  } catch (err) { showLogin('연결을 확인해 주세요: ' + (err.message || '연결 오류')); }
 })();
-setInterval(() => { if (user && !document.hidden && !loadingEntries) loadEvents(); },20000);
+setInterval(() => { if (user && !document.hidden && !loadingEntries && !loadingPhotos) loadEvents(); },30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && user) loadEvents(); });
 </script>
 </body>
