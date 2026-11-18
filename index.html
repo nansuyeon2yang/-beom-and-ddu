@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#fff7fa">
+  <meta name="description" content="범이와뚜, 우리 둘만의 작은 기록 공간">
+  <title>범이와뚜 💗</title>
+  <style>
+    :root { color-scheme:light; font-family:system-ui,-apple-system,'Noto Sans KR',sans-serif; --bg:#fff7fa; --card:#fff; --ink:#342b35; --muted:#7a6f79; --border:#f4dce5; --subtle:#f8e3eb; --accent:#e17c9d; --accent-dark:#b94d73; --shadow:0 10px 28px rgba(93,45,66,.055); }
+    body.dark { color-scheme:dark; --bg:#201c24; --card:#302934; --ink:#faf2f7; --muted:#c3b8c2; --border:#51414e; --subtle:#483340; --accent:#db779e; --accent-dark:#f2b9d0; --shadow:0 10px 28px rgba(0,0,0,.15); }
+    *{box-sizing:border-box} html{min-height:100%} body{margin:0;min-height:100vh;background:var(--bg);color:var(--ink)}
+    .shell{max-width:560px;margin:auto;padding:22px 16px 60px} .top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px}
+    h1{margin:0 0 4px;font-size:26px;letter-spacing:-.04em} .subtitle{color:var(--muted);font-size:13px;margin:0}
+    h2{font-size:18px;letter-spacing:-.025em;margin:0 0 14px} h3{font-size:15px;margin:0 0 8px}
+    button,input{font:inherit} button{cursor:pointer;background:var(--subtle);color:var(--ink);border:0;border-radius:13px;padding:11px 14px;font-size:14px}
+    button:disabled{opacity:.5;cursor:wait} button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    .theme{font-size:20px;min-width:48px;min-height:48px} .panel{background:var(--card);border-radius:24px;box-shadow:var(--shadow);padding:18px;margin-bottom:18px}
+    .primary{background:var(--accent);color:#fff;font-weight:700} .full{width:100%} .soft{background:var(--subtle)}
+    .field{display:block;font-size:13px;font-weight:650;margin-bottom:7px} input{width:100%;border:1px solid var(--border);border-radius:13px;background:var(--card);color:var(--ink);padding:13px 14px;font-size:16px;min-height:48px}
+    input::placeholder{color:var(--muted);opacity:.75} .stack{display:grid;gap:12px} .row{display:flex;gap:8px;align-items:center}.between{justify-content:space-between}
+    .muted{color:var(--muted)} .small{font-size:12px;line-height:1.6} .notice{background:var(--subtle);border-radius:15px;padding:12px 14px;font-size:12px;line-height:1.65}
+    .error{color:#bd4363;font-size:13px;line-height:1.5;min-height:19px} body.dark .error{color:#ff9fbe}
+    [hidden]{display:none!important} .userbar{margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+    .email{font-size:12px;color:var(--muted);overflow-wrap:anywhere} .logout{font-size:12px;padding:8px 11px}
+    .cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px} .cal-nav strong{font-size:18px}
+    .nav-btn{font-size:19px;min-width:42px;min-height:42px;padding:8px} .week,.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+    .week span{text-align:center;padding:9px 0;color:var(--muted);font-size:12px}.day{min-height:70px;padding:8px 1px 5px;border-radius:12px;background:transparent;border:1px solid transparent;display:flex;align-items:center;flex-direction:column;gap:5px;font-size:13px;position:relative}
+    .day.today{border-color:var(--accent)} .day.selected{background:var(--subtle)} .day:active{transform:scale(.97)}
+    .dot{height:6px;width:6px;border-radius:50%;background:var(--accent)} .count{color:var(--muted);font-size:10px} .empty-day{min-height:70px}
+    .cover-thumb{width:calc(100% - 2px);height:42px;border-radius:7px;object-fit:cover;display:block;margin-top:1px}
+    .day.has-photo{min-height:92px}.day .dot{position:absolute;right:5px;top:10px}
+    .photo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .photo-item{position:relative;border:1px solid var(--border);border-radius:15px;overflow:hidden;background:var(--bg)}
+    .photo-item img{display:block;width:100%;height:150px;object-fit:cover}
+    .photo-actions{display:flex;align-items:center;justify-content:space-between;gap:5px;padding:7px;flex-wrap:wrap}
+    .photo-actions button{font-size:12px;padding:7px 9px}
+    .photo-placeholder{height:150px;display:grid;place-items:center;color:var(--muted);font-size:12px;padding:12px;text-align:center}
+    input[type=file]{padding:9px 10px;height:auto;min-height:48px}.photo-help{margin:8px 0 0;font-size:12px;line-height:1.6;color:var(--muted)}
+    .entry-list{margin-top:14px}.entry{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 0;border-bottom:1px solid var(--border)}
+    .entry:last-child{border-bottom:none}.entry-text{font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere;flex:1}.entry-actions{display:flex;gap:6px}
+    .entry-actions button{font-size:12px;padding:8px 10px}.form-row{display:grid;gap:9px;margin-top:8px}
+    .sync-line{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px}
+    #importPanel{border:1px dashed var(--accent)} #status{min-height:18px} .photo-notice{margin-top:14px;border:1px dashed var(--border);padding:14px;border-radius:15px;font-size:12px;color:var(--muted);text-align:center}
+
+    textarea{font:inherit;width:100%;resize:vertical;min-height:100px;border:1px solid var(--border);border-radius:13px;background:var(--card);color:var(--ink);padding:13px 14px;font-size:15px;line-height:1.6}
+    textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+    .journal-box{margin:16px 0 18px;border:1px solid var(--border);border-radius:17px;padding:15px;background:var(--card)}
+    .journal-meta{font-size:12px;color:var(--muted);line-height:1.6;overflow-wrap:anywhere;margin:9px 0}
+    .unread-comment-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#e85c98;box-shadow:0 0 0 2px var(--card);margin-left:5px;vertical-align:middle;flex-shrink:0}
+    .comment-list{display:grid;gap:10px;margin:12px 0}
+    .comment-item{border:1px solid var(--border);border-radius:14px;padding:12px;background:var(--bg)}
+    .comment-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-bottom:6px}
+    .comment-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6;font-size:14px}
+    .comment-tools{display:flex;gap:6px}.comment-tools button{font-size:11px;padding:5px 8px}
+    .nickname-settings{margin:0 0 14px}.nickname-settings summary{font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:8px}
+    .nickname-settings .row{align-items:stretch}.nickname-settings input{flex:1;min-width:0}
+    footer{text-align:center;font-size:12px;color:var(--muted);line-height:1.6;margin-top:25px}
+    @media (min-width:520px){.shell{padding-top:28px}.panel{padding:22px}.day{min-height:82px}}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+ <main class="shell">
+  <header class="top">
+    <div><h1>💕 범이와뚜</h1><p class="subtitle">우리 둘만의 작은 기록 공간</p></div>
+    <button class="theme" id="themeBtn" type="button" aria-label="라이트·다크모드 전환">🌙</button>
+  </header>
+  <section id="starting" class="panel" aria-live="polite"><p class="muted">달력을 준비하고 있어요… 💗</p></section>
+  <section id="loginView" class="panel" hidden>
+    <h2>🔐 우리 공간 들어가기</h2>
+    <p class="small muted">등록된 계정으로 로그인하면 둘이 같은 일정을 볼 수 있어요.</p>
+    <form id="loginForm" class="stack" style="margin-top:18px">
+      <div><label class="field" for="emailInput">이메일</label><input type="email" autocomplete="username" id="emailInput" placeholder="이메일 주소" required></div>
+      <div><label class="field" for="passwordInput">비밀번호</label><input type="password" autocomplete="current-password" id="passwordInput" placeholder="내 계정 비밀번호" required></div>
+      <button type="submit" id="loginBtn" class="primary full">로그인하기 💗</button>
+      <div class="error" id="loginError" role="alert"></div>
+    </form>
+    <button id="showSignupBtn" class="full soft" type="button" style="margin-top:12px">💕 범이 회원가입하기</button>
+    <form id="signupForm" class="stack" style="margin-top:14px" hidden>
+      <h3>💕 새 계정 만들기</h3>
+      <p class="small muted">범이 본인의 이메일로 가입해 줘. 가입 후 달력 공유 권한은 관리자가 승인해야 해.</p>
+      <div><label class="field" for="signupEmail">이메일</label><input type="email" id="signupEmail" autocomplete="email" required></div>
+      <div><label class="field" for="signupPassword">비밀번호 (최소 8자)</label><input type="password" id="signupPassword" autocomplete="new-password" minlength="8" required></div>
+      <div><label class="field" for="signupConfirm">비밀번호 확인</label><input type="password" id="signupConfirm" autocomplete="new-password" minlength="8" required></div>
+      <button id="signupBtn" class="primary full" type="submit">계정 만들기 💗</button>
+      <p id="signupStatus" class="small" role="status" aria-live="polite"></p>
+    </form>
+    <p class="notice" style="margin:14px 0 0">회원가입은 Supabase에서 허용한 경우에만 가능해요. 가입 후 이메일 인증 및 관리자의 공유 권한 승인이 필요할 수 있어요. 아직 공동 입장 비밀번호는 연결되지 않았어요.</p>
+  </section>
+  <div id="appView" hidden>
+    <div class="userbar"><span id="whoami" class="email"></span><button id="logoutBtn" class="logout" type="button">로그아웃</button></div>
+    <details class="nickname-settings panel">
+      <summary>👤 우리 이름 설정 (처음 한 번만)</summary>
+      <p class="small muted">추억 글과 댓글 옆에 표시할 내 이름이에요. 예: 뚜, 범이</p>
+      <form id="nicknameForm" class="row">
+        <input id="nicknameInput" maxlength="16" placeholder="내 이름 입력" aria-label="내 이름" required>
+        <button id="nicknameBtn" type="submit" class="primary">저장</button>
+      </form>
+      <p id="nicknameStatus" class="small" role="status"></p>
+    </details>
+    <section class="panel">
+      <div class="cal-nav"><button id="prevMonth" class="nav-btn" type="button" aria-label="이전 달">❮</button><strong id="monthTitle"></strong><button id="nextMonth" class="nav-btn" type="button" aria-label="다음 달">❯</button></div>
+      <div class="week" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+      <div id="calendar" class="days"></div>
+      <div class="sync-line"><span id="syncStatus">일정을 불러오는 중…</span><button id="refreshBtn" type="button" style="padding:5px 9px;font-size:12px">↻ 새로고침</button></div>
+    </section>
+    <section class="panel">
+      <h2 id="selectedTitle"></h2>
+      <form id="eventForm" class="form-row">
+        <label class="field" for="eventInput">우리의 일정이나 추억</label>
+        <input id="eventInput" maxlength="100" placeholder="예: 함께 영화 보는 날 💗" required>
+        <button id="saveEventBtn" class="primary full" type="submit">일정 저장하기</button>
+      </form>
+      <div id="status" class="small" role="status" aria-live="polite"></div>
+      <div id="events" class="entry-list"></div>
+      <div class="journal-box">
+        <h3>💌 이 날의 추억 글</h3>
+        <p class="photo-help">날짜마다 한 편을 함께 쓰고, 아래 댓글로 이야기를 이어가요.</p>
+        <form id="journalForm" class="form-row">
+          <label class="field" for="journalInput">우리의 이야기 (최대 3,000자)</label>
+          <textarea id="journalInput" maxlength="3000" rows="5" required placeholder="오늘 우리가 함께한 순간을 적어봐 💗"></textarea>
+          <button id="journalSaveBtn" class="primary full" type="submit">이 날짜의 추억 저장하기 💗</button>
+        </form>
+        <div class="row between" style="margin-top:10px">
+          <span id="journalMeta" class="journal-meta">추억 글 불러오는 중…</span>
+          <button id="journalDeleteBtn" type="button" hidden style="font-size:12px;padding:7px 9px">글 삭제</button>
+        </div>
+        <p id="journalStatus" class="small" role="status" aria-live="polite"></p>
+        <h3 style="margin-top:18px">💬 우리의 댓글</h3>
+        <div id="commentList" class="comment-list"></div>
+        <form id="commentForm" class="form-row">
+          <label class="field" for="commentInput">댓글 쓰기 (최대 500자)</label>
+          <textarea id="commentInput" maxlength="500" rows="2" placeholder="서로에게 남기고 싶은 한마디 💕" required></textarea>
+          <button id="commentSaveBtn" class="primary full" type="submit">댓글 남기기</button>
+        </form>
+        <p id="commentStatus" class="small" role="status" aria-live="polite"></p>
+      </div>
+      <div class="photo-notice" style="text-align:left">
+        <h3>📸 이 날의 사진</h3>
+        <p class="photo-help">사진을 여러 장 등록하고, 대표사진 한 장을 달력에 표시해요. 둘만 접근할 수 있는 비공개 저장소를 이용해요.</p>
+        <form id="photoForm" class="form-row">
+          <label class="field" for="photoInput">사진 선택 (한 번에 최대 10장)</label>
+          <input id="photoInput" type="file" accept="image/*" multiple required>
+          <button id="uploadPhotoBtn" class="primary full" type="submit">이 날짜에 사진 올리기 💗</button>
+        </form>
+        <p class="photo-help">용량 절약을 위해 사진은 긴 변 1600px로 줄여 업로드해요. 원본 사진은 휴대폰이나 별도 백업에 보관해 주세요.</p>
+        <p id="photoStatus" class="small" role="status" aria-live="polite"></p>
+        <div id="photoGrid" class="photo-grid"></div>
+
+      </div>
+    </section>
+    <section id="importPanel" class="panel" hidden>
+      <h3>💌 이전 달력의 일정이 있어요!</h3>
+      <p class="muted small" id="importInfo">이 휴대폰에 저장된 옛 일정을 찾아왔어요.</p>
+      <button id="importBtn" class="primary full" type="button">이전 일정 클라우드로 옮기기</button>
+      <p class="small muted" style="margin:10px 0 0">가져오기는 직접 누를 때만 진행해요. 기존 휴대폰 기록은 삭제하지 않아요.</p>
+    </section>
+    <p class="notice">🔐 일정·사진·추억 글·댓글은 로그인과 데이터 접근 정책으로 제한돼요. 사진 URL은 제한 시간 동안만 유효하니 외부에 공유하지 마세요. 소중한 원본은 꼭 따로 백업해 주세요. 앱은 다른 기기의 변경을 주기적으로 확인해요.</p>
+    <footer>💕 범이와뚜 · 우리 둘만의 기록</footer>
+  </div>
+ </main>
+<script>
+'use strict';
+const SUPABASE_URL = 'https://dwrahakfxysekmtmayye.supabase.co';
+// 브라우저에 사용해도 되는 공개용 Publishable key. Secret key는 절대 넣지 마세요.
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_N5ELH9Xxzv3OTPCnljTG-A_KkQfJpED';
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, '0');
+const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = new Date();
+let month = new Date(today.getFullYear(), today.getMonth(), 1);
+let selected = dateKey(today);
+let user = null;
+let entries = [];
+let loadingEntries = false;
+let client = null;
+let loadVersion = 0;
+const PHOTO_BUCKET = 'beomddu-photos';
+let photos = [], covers = new Map(), photoLoadVersion = 0, loadingPhotos = false;
+const photoSignedCache = new Map();
+let journal = null, comments = [], journalLoadVersion = 0, journalDataDate = '';
+let journalDraftDate = '', journalDirty = false;
+let memoryProfiles = new Map();
+let unreadCommentDates = new Set();
+let unreadLoadVersion = 0;
+
+
+const setText = (id, text) => { $(id).textContent = text; };
+function setTheme(dark) {
+ document.body.classList.toggle('dark', dark);
+ $('themeBtn').textContent = dark ? '☀️' : '🌙';
+ try { localStorage.setItem('beomddu-theme', dark ? 'dark' : 'light'); } catch (_) {}
+}
+try { setTheme(localStorage.getItem('beomddu-theme') === 'dark'); } catch (_) { setTheme(false); }
+$('themeBtn').addEventListener('click', () => setTheme(!document.body.classList.contains('dark')));
+function show(section) {
+ $('starting').hidden = section !== 'starting';
+ $('loginView').hidden = section !== 'login';
+ $('appView').hidden = section !== 'app';
+}
+function showLogin(message = '') {
+ user = null;
+ entries = [];
+ photos = []; covers.clear(); photoSignedCache.clear(); ++photoLoadVersion;
+ journal=null;comments=[];journalDataDate='';unreadCommentDates.clear();++unreadLoadVersion;memoryProfiles.clear();++journalLoadVersion;journalDraftDate='';journalDirty=false;
+ ++loadVersion;
+ show('login');
+ setText('loginError', message);
+ $('passwordInput').value = '';
+}
+function message(text, bad = false) {
+ setText('status', text);
+ $('status').style.color = bad ? '#bd4363' : 'var(--muted)';
+}
+function renderCalendar() {
+ setText('monthTitle', `${month.getFullYear()}년 ${month.getMonth()+1}월`);
+ const cal = $('calendar');
+ cal.replaceChildren();
+ const start = new Date(month.getFullYear(), month.getMonth(), 1);
+ const days = new Date(month.getFullYear(), month.getMonth()+1, 0).getDate();
+ for (let n = 0; n < start.getDay(); n++) {
+   const blank = document.createElement('div'); blank.className = 'empty-day'; cal.append(blank);
+ }
+ for (let n = 1; n <= days; n++) {
+   const date = dateKey(new Date(month.getFullYear(), month.getMonth(), n));
+   const count = entries.filter(e => e.event_date === date).length;
+   const datePhotos = photos.filter(p => p.memory_date === date);
+   const cover = datePhotos.find(p => p.id === covers.get(date)) || datePhotos[0];
+   const button = document.createElement('button');
+   button.type = 'button';
+   button.className = 'day' + (date === selected ? ' selected' : '') + (date === dateKey(today) ? ' today' : '') + (cover ? ' has-photo' : '');
+   button.setAttribute('aria-label', `${date} 일정 ${count}개`);
+   const label = document.createElement('span'); label.textContent = String(n); button.append(label);
+   if (unreadCommentDates.has(date)) { const dot=document.createElement('span');dot.className='unread-comment-dot';dot.title='새 댓글';dot.setAttribute('aria-label','새 댓글');button.append(dot); }
+   if (count) { const dot = document.createElement('span'); dot.className = 'dot'; button.append(dot); }
+   if (cover) {
+     const src = photoSignedCache.get(cover.storage_path)?.url;
+     if (src) { const img=document.createElement('img');img.className='cover-thumb';img.src=src;img.alt=`${date} 대표 사진`;img.loading='lazy';button.append(img); }
+     else {const badge=document.createElement('span');badge.textContent='📸';button.append(badge);}
+   }
+   button.addEventListener('click', () => { selected = date; renderCalendar(); renderEvents(); renderPhotoGallery(); loadJournal(true); });
+   cal.append(button);
+ }
+}
+function renderEvents() {
+ setText('selectedTitle', `${selected}의 기록`);
+ const container = $('events'); container.replaceChildren();
+ const dayEvents = entries.filter(item => item.event_date === selected);
+ if (!dayEvents.length) {
+   const empty = document.createElement('p'); empty.className = 'muted small';
+   empty.textContent = '아직 이 날의 기록이 없어요. 함께 채워볼까? 💗'; container.append(empty); return;
+ }
+ dayEvents.forEach(item => {
+   const wrap = document.createElement('div'); wrap.className = 'entry';
+   const title = document.createElement('span'); title.className = 'entry-text'; title.textContent = item.title;
+   const actions = document.createElement('div'); actions.className = 'entry-actions';
+   const edit = document.createElement('button'); edit.type='button'; edit.textContent='수정';
+   edit.addEventListener('click', () => editEvent(item));
+   const remove = document.createElement('button'); remove.type='button'; remove.textContent='삭제';
+   remove.addEventListener('click', () => deleteEvent(item));
+   actions.append(edit, remove); wrap.append(title, actions); container.append(wrap);
+ });
+}
+
+// V4: 한 날짜에 글 하나, 그 글 아래 여러 개의 댓글을 저장합니다.
+function journalMessage(text, bad=false) {
+ const el=$('journalStatus');el.textContent=text;el.style.color=bad?'#bd4363':'var(--muted)';
+}
+function commentMessage(text, bad=false) {
+ const el=$('commentStatus');el.textContent=text;el.style.color=bad?'#bd4363':'var(--muted)';
+}
+function displayName(userId) {
+ return memoryProfiles.get(userId) || (userId === user?.id ? '나' : '상대방');
+}
+function niceDate(iso) {
+ if (!iso) return '';
+ const dt=new Date(iso);
+ if (Number.isNaN(dt.getTime())) return '';
+ return `${dt.getFullYear()}.${pad(dt.getMonth()+1)}.${pad(dt.getDate())} ${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+}
+async function loadProfiles() {
+ if (!client || !user) return;
+ const {data,error}=await client.from('memory_profiles').select('user_id,nickname');
+ if (error) { $('nicknameStatus').textContent='이름 정보 조회 실패: '+error.message;return; }
+ memoryProfiles=new Map((data||[]).map(p=>[p.user_id,p.nickname]));
+ $('nicknameInput').value=memoryProfiles.get(user.id)||'';
+ renderJournal();
+}
+async function saveNickname(e) {
+ e.preventDefault();if(!client||!user)return;
+ const nickname=$('nicknameInput').value.trim();
+ if(!nickname||nickname.length>16){$('nicknameStatus').textContent='이름은 1~16자로 입력해 줘.';return;}
+ const button=$('nicknameBtn');button.disabled=true;
+ try {
+   const current=memoryProfiles.has(user.id);
+   const result=current
+     ? await client.from('memory_profiles').update({nickname,updated_at:new Date().toISOString()}).eq('user_id',user.id)
+     : await client.from('memory_profiles').insert({user_id:user.id,nickname});
+   if(result.error)throw result.error;
+   memoryProfiles.set(user.id,nickname);
+   $('nicknameStatus').textContent='💗 이름 저장 완료!';renderJournal();
+ }catch(err){$('nicknameStatus').textContent='이름 저장 실패: '+(err.message||'오류');}
+ finally{button.disabled=false;}
+}
+function renderJournal() {
+ const input=$('journalInput');
+ if(journalDraftDate!==selected){journalDraftDate=selected;journalDirty=false;input.value=journal?.body||'';}
+ else if(!journalDirty){input.value=journal?.body||'';}
+ $('journalSaveBtn').textContent=journal?'추억 글 수정하기 💗':'이 날짜의 추억 저장하기 💗';
+ const author=journal?`처음 기록: ${displayName(journal.created_by)} · 최근 수정: ${displayName(journal.updated_by)} · ${niceDate(journal.updated_at)}`:'아직 이 날짜에 추억 글이 없어요.';
+ setText('journalMeta',author);
+ $('journalDeleteBtn').hidden=!journal || journal.created_by!==user?.id;
+ $('commentInput').disabled=!journal;
+ $('commentSaveBtn').disabled=!journal;
+ $('commentInput').placeholder=journal?'서로에게 남기고 싶은 한마디 💕':'추억 글을 먼저 저장하면 댓글을 쓸 수 있어요.';
+ const list=$('commentList');list.replaceChildren();
+ if(!journal){ const p=document.createElement('p');p.className='small muted';p.textContent='추억 글을 저장하면 댓글을 남길 수 있어요 💬';list.append(p);return; }
+ if(!comments.length){const p=document.createElement('p');p.className='small muted';p.textContent='아직 댓글이 없어요. 첫 댓글을 남겨봐!';list.append(p);return;}
+ for(const c of comments){
+   const item=document.createElement('div');item.className='comment-item';
+   const head=document.createElement('div');head.className='comment-head';
+   const who=document.createElement('span');who.textContent=`${displayName(c.created_by)} · ${niceDate(c.created_at)}`;
+   head.append(who);
+   if(c.created_by===user?.id){
+      const tools=document.createElement('span');tools.className='comment-tools';
+      const edit=document.createElement('button');edit.type='button';edit.textContent='수정';edit.addEventListener('click',()=>editComment(c));
+      const del=document.createElement('button');del.type='button';del.textContent='삭제';del.addEventListener('click',()=>deleteComment(c));
+      tools.append(edit,del);head.append(tools);
+   }
+   const body=document.createElement('div');body.className='comment-body';body.textContent=c.body;
+   item.append(head,body);list.append(item);
+ }
+}
+
+// V5: 상대방의 새 댓글만 사용자별 읽음 상태와 비교합니다.
+async function loadUnreadComments() {
+ if (!client || !user) return;
+ const run=++unreadLoadVersion, uid=user.id, [from,to]=monthRange();
+ try {
+  const [commentResult, readResult] = await Promise.all([
+   client.from('memory_comments').select('memory_date,created_at,created_by').gte('memory_date',from).lte('memory_date',to).neq('created_by',uid),
+   client.from('memory_comment_reads').select('memory_date,last_read_at').eq('user_id',uid).gte('memory_date',from).lte('memory_date',to)
+  ]);
+  if(commentResult.error)throw commentResult.error;
+  if(readResult.error)throw readResult.error;
+  if(run!==unreadLoadVersion || !user || user.id!==uid)return;
+  const readAt=new Map((readResult.data||[]).map(x=>[x.memory_date,x.last_read_at]));
+  const next=new Set();
+  for(const c of commentResult.data||[]){
+   const last=readAt.get(c.memory_date);
+   if(!last || new Date(c.created_at).getTime()>new Date(last).getTime())next.add(c.memory_date);
+  }
+  unreadCommentDates=next;
+  renderCalendar();
+ } catch(err) { console.warn('댓글 알림 확인 실패:',err.message||err); }
+}
+async function markCommentsRead(date, loadedComments) {
+ if(!client||!user)return;
+ // 읽은 댓글의 최종 생성 시각까지만 표시해, 확인 도중 새로 도착한 댓글은 놓치지 않습니다.
+ const last=(loadedComments||[]).filter(c=>c.created_by!==user.id)
+   .map(c=>c.created_at).sort().at(-1);
+ if(!last)return;
+ const uid=user.id;
+ try {
+  const {data:prior,error:priorError}=await client.from('memory_comment_reads')
+   .select('last_read_at').eq('user_id',uid).eq('memory_date',date).maybeSingle();
+  if(priorError)throw priorError;
+  if(prior && new Date(prior.last_read_at)>=new Date(last))return;
+  const {error}=await client.from('memory_comment_reads').upsert(
+   {user_id:uid,memory_date:date,last_read_at:last},{onConflict:'user_id,memory_date'});
+  if(error)throw error;
+  await loadUnreadComments();
+ } catch(err) {console.warn('댓글 읽음 저장 실패:',err.message||err);}
+}
+
+async function loadJournal(markRead = false) {
+ if(!client||!user)return;
+ const run=++journalLoadVersion, targetDate=selected;
+ if (journalDataDate !== targetDate) {
+   journalDataDate=targetDate; journal=null; comments=[]; renderJournal();
+   setText('journalMeta','☁️ 추억 글 불러오는 중…');
+ }
+ try {
+   const one=await client.from('memory_stories')
+       .select('memory_date,body,created_by,updated_by,created_at,updated_at')
+       .eq('memory_date',targetDate).maybeSingle();
+   if(one.error)throw one.error;
+   if(run!==journalLoadVersion||!user||selected!==targetDate)return;
+   let rows=[];
+   if(one.data){
+      const cr=await client.from('memory_comments').select('id,memory_date,body,created_by,created_at')
+         .eq('memory_date',targetDate).order('created_at',{ascending:true});
+      if(cr.error)throw cr.error;
+      rows=cr.data||[];
+   }
+   if(run!==journalLoadVersion||!user||selected!==targetDate)return;
+   journal=one.data||null;comments=rows;renderJournal();
+   if (markRead) await markCommentsRead(targetDate, rows);
+ }catch(err){if(run===journalLoadVersion)journalMessage('추억 글 불러오기 실패: '+(err.message||'연결 오류'),true);}
+}
+async function saveJournal(e) {
+ e.preventDefault();if(!user||!client)return;
+ const targetDate=selected,body=$('journalInput').value.trim();
+ if(!body||body.length>3000){journalMessage('추억 글을 1~3,000자로 입력해 줘.',true);return;}
+ const btn=$('journalSaveBtn');btn.disabled=true;journalMessage('저장 중…');
+ try {
+   const now=new Date().toISOString();
+   const result=journal
+     ? await client.from('memory_stories').update({body,updated_by:user.id,updated_at:now}).eq('memory_date',targetDate)
+     : await client.from('memory_stories').insert({memory_date:targetDate,body,created_by:user.id,updated_by:user.id});
+   if(result.error)throw result.error;
+   journalDirty=false;journalMessage('💗 추억 글 저장 완료!');await loadJournal();
+ }catch(err){journalMessage('추억 글 저장 실패: '+(err.message||'오류')+' (같은 날 글이 이미 있으면 새로고침해 줘.)',true);}
+ finally{btn.disabled=false;}
+}
+async function deleteJournal() {
+ if(!journal||journal.created_by!==user?.id)return;
+ if(!confirm('이 날짜의 추억 글을 삭제할까? 연결된 댓글도 모두 삭제돼요. 사진과 일정은 그대로 남아요.'))return;
+ try {
+   const res=await client.from('memory_stories').delete().eq('memory_date',selected);
+   if(res.error)throw res.error;
+   journalDirty=false;journalMessage('추억 글과 댓글을 삭제했어.');await loadJournal();
+ }catch(err){journalMessage('글 삭제 실패: '+(err.message||'오류'),true);}
+}
+async function addComment(e) {
+ e.preventDefault();if(!journal||!user)return;
+ const targetDate=selected,body=$('commentInput').value.trim();
+ if(!body||body.length>500){commentMessage('댓글을 1~500자로 적어줘.',true);return;}
+ const btn=$('commentSaveBtn');btn.disabled=true;commentMessage('댓글 저장 중…');
+ try {
+   const res=await client.from('memory_comments').insert({memory_date:targetDate,body,created_by:user.id});
+   if(res.error)throw res.error;
+   $('commentInput').value='';commentMessage('💬 댓글 저장 완료!');await loadJournal();
+ }catch(err){commentMessage('댓글 저장 실패: '+(err.message||'오류'),true);}
+ finally{btn.disabled=false;}
+}
+async function editComment(c) {
+ if(c.created_by!==user?.id)return;
+ const body=prompt('댓글을 수정할까?',c.body);if(body===null||body.trim()===c.body)return;
+ if(!body.trim()||body.trim().length>500){commentMessage('댓글은 1~500자여야 해.',true);return;}
+ try {
+   const res=await client.from('memory_comments').update({body:body.trim()}).eq('id',c.id);
+   if(res.error)throw res.error;
+   commentMessage('댓글 수정 완료 💗');await loadJournal();
+ }catch(err){commentMessage('댓글 수정 실패: '+(err.message||'오류'),true);}
+}
+async function deleteComment(c) {
+ if(c.created_by!==user?.id||!confirm('이 댓글을 삭제할까?'))return;
+ try {
+   const res=await client.from('memory_comments').delete().eq('id',c.id);
+   if(res.error)throw res.error;
+   commentMessage('댓글 삭제 완료.');await loadJournal();
+ }catch(err){commentMessage('댓글 삭제 실패: '+(err.message||'오류'),true);}
+}
+
+function monthRange() {
+ return [dateKey(new Date(month.getFullYear(),month.getMonth(),1)), dateKey(new Date(month.getFullYear(),month.getMonth()+1,0))];
+}
+function photoMessage(text, bad=false) {
+ const el = $('photoStatus'); el.textContent = text; el.style.color = bad ? '#bd4363' : 'var(--muted)';
+}
+function renderPhotoGallery() {
+ const grid = $('photoGrid'); grid.replaceChildren();
+ const selectedPhotos = photos.filter(p => p.memory_date === selected);
+ if (!selectedPhotos.length) {const p=document.createElement('p'); p.className='small muted'; p.textContent='이 날짜에 사진이 아직 없어요 📷'; grid.append(p); return;}
+ const coverId = covers.get(selected);
+ for (const photo of selectedPhotos) {
+   const item=document.createElement('div');item.className='photo-item';
+   const url=photoSignedCache.get(photo.storage_path)?.url;
+   if (url) {const img=document.createElement('img');img.src=url;img.alt=`${selected} 추억 사진`;img.loading='lazy';item.append(img);}
+   else {const empty=document.createElement('div');empty.className='photo-placeholder';empty.textContent='미리보기를 불러오지 못했어요. 새로고침해 주세요.';item.append(empty);}
+   const actions=document.createElement('div'); actions.className='photo-actions';
+   const cover=document.createElement('button');cover.type='button';
+   cover.textContent=photo.id===coverId?'💗 대표사진':'대표로 선택';
+   cover.disabled=photo.id===coverId;
+   cover.addEventListener('click',()=>setCoverPhoto(photo));
+   const del=document.createElement('button');del.type='button';del.textContent='삭제';
+   del.addEventListener('click',()=>deletePhoto(photo));
+   actions.append(cover,del);item.append(actions);grid.append(item);
+ }
+}
+async function loadPhotos() {
+ if (!client || !user) return;
+ const run=++photoLoadVersion, [from,to]=monthRange();loadingPhotos=true;
+ try {
+   const [pr,cr]=await Promise.all([
+     client.from('memory_photos').select('id,memory_date,storage_path,uploaded_by,created_at')
+       .gte('memory_date',from).lte('memory_date',to).order('created_at',{ascending:true}),
+     client.from('memory_covers').select('memory_date,photo_id').gte('memory_date',from).lte('memory_date',to)
+   ]);
+   if (pr.error) throw pr.error;
+   if (cr.error) throw cr.error;
+   if (run!==photoLoadVersion || !user) return;
+   photos=pr.data||[];covers=new Map((cr.data||[]).map(c=>[c.memory_date,c.photo_id]));
+   await Promise.all(photos.map(async p=>{
+     const cached=photoSignedCache.get(p.storage_path);
+     if (cached && cached.expires>Date.now()) return;
+     const {data,error}=await client.storage.from(PHOTO_BUCKET).createSignedUrl(p.storage_path,3600);
+     if (!error && data?.signedUrl) photoSignedCache.set(p.storage_path,{url:data.signedUrl,expires:Date.now()+45*60*1000});
+   }));
+   if (run!==photoLoadVersion || !user) return;
+   renderCalendar();renderPhotoGallery();
+ } catch(err) {if(run===photoLoadVersion)photoMessage('사진 불러오기 실패: '+(err.message||'연결 오류'),true);}
+ finally {if(run===photoLoadVersion)loadingPhotos=false;}
+}
+function convertPhoto(file) {
+ return new Promise((resolve,reject)=>{
+   if (!file.type.startsWith('image/')) {reject(new Error('이미지 파일만 올릴 수 있어요.'));return;}
+   if (file.size>30*1024*1024) {reject(new Error('원본은 30MB 이하만 선택해 주세요.'));return;}
+   const objectUrl=URL.createObjectURL(file), img=new Image();
+   img.onload=()=>{
+     try {
+       const scale=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight));
+       const canvas=document.createElement('canvas');
+       canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));
+       canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));
+       const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+       ctx.drawImage(img,0,0,canvas.width,canvas.height);
+       URL.revokeObjectURL(objectUrl);
+       canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('사진 변환을 완료할 수 없어요.')), 'image/jpeg',0.82);
+     } catch(e){URL.revokeObjectURL(objectUrl);reject(e);}
+   };
+   img.onerror=()=>{URL.revokeObjectURL(objectUrl);reject(new Error('사진을 열지 못했어요. HEIC라면 갤러리에서 JPG로 변환해 주세요.'));};
+   img.src=objectUrl;
+ });
+}
+async function uploadPhotos(e) {
+ e.preventDefault();if(!client||!user)return;
+ const files=Array.from($('photoInput').files||[]);
+ if(!files.length)return;
+ if(files.length>10){photoMessage('한 번에 최대 10장씩 선택해 줘.',true);return;}
+ const btn=$('uploadPhotoBtn'), uploadDate=selected;btn.disabled=true;
+ let completed=0;const errors=[];
+ try {
+   for(let i=0;i<files.length;i++){
+     let path='';photoMessage(`📸 ${i+1}/${files.length}장 올리는 중…`);
+     try {
+       const blob=await convertPhoto(files[i]);
+       if(blob.size>8*1024*1024)throw new Error('압축된 사진이 8MB를 넘어요.');
+       path=`photos/${uploadDate}/${crypto.randomUUID()}.jpg`;
+       const uploaded=await client.storage.from(PHOTO_BUCKET).upload(path,blob,{contentType:'image/jpeg',upsert:false,cacheControl:'3600'});
+       if(uploaded.error)throw uploaded.error;
+       const created=await client.from('memory_photos').insert({memory_date:uploadDate,storage_path:path,uploaded_by:user.id}).select('id').single();
+       if(created.error){await client.storage.from(PHOTO_BUCKET).remove([path]);throw created.error;}
+       completed++;
+       if (completed===1 && !covers.has(uploadDate) && !photos.some(p=>p.memory_date===uploadDate)) {
+         const r=await client.from('memory_covers').upsert({memory_date:uploadDate,photo_id:created.data.id},{onConflict:'memory_date'});
+         if(r.error)errors.push('대표사진 자동 지정 실패(사진은 저장됨)');
+       }
+     }catch(err){errors.push(`${files[i].name}: ${err.message||'오류'}`);}
+   }
+   $('photoInput').value='';
+   photoMessage(`💕 ${completed}장 업로드 완료!`+(errors.length?' 일부 실패: '+errors.join('; '):''),!!errors.length);
+   await loadPhotos();
+ }finally{btn.disabled=false;}
+}
+async function setCoverPhoto(photo) {
+ try{
+  photoMessage('대표사진 저장 중…');
+  const {error}=await client.from('memory_covers').upsert({memory_date:photo.memory_date,photo_id:photo.id},{onConflict:'memory_date'});
+  if(error)throw error;
+  photoMessage('💗 대표사진 변경 완료!');await loadPhotos();
+ }catch(err){photoMessage('대표사진 설정 실패: '+(err.message||'오류'),true);}
+}
+async function deletePhoto(photo){
+ if(!confirm('이 사진을 추억 기록에서 삭제할까? 저장소에서도 삭제돼요.'))return;
+ try {
+   const res=await client.from('memory_photos').delete().eq('id',photo.id);
+   if(res.error)throw res.error;
+   const removed=await client.storage.from(PHOTO_BUCKET).remove([photo.storage_path]);
+   photoSignedCache.delete(photo.storage_path);
+   photoMessage(removed.error?'기록에서는 삭제됐지만 저장소 정리가 필요해요: '+removed.error.message:'사진 삭제 완료 💗',!!removed.error);
+   await loadPhotos();
+ }catch(err){photoMessage('사진 삭제 실패: '+(err.message||'오류'),true);}
+}
+async function loadEvents() {
+ if (!user || !client) return;
+ const run = ++loadVersion;
+ const [from, to] = monthRange();
+ loadingEntries = true;
+ setText('syncStatus', '☁️ 일정을 불러오는 중…');
+ try {
+   const {data,error} = await client.from('events')
+     .select('id,event_date,title,created_at')
+     .gte('event_date',from).lte('event_date',to)
+     .order('created_at',{ascending:true});
+   if (run !== loadVersion || !user) return;
+   if (error) throw error;
+   entries = data || [];
+   const now = new Date();
+   setText('syncStatus', `☁️ 동기화 완료 · ${pad(now.getHours())}:${pad(now.getMinutes())}`);
+   renderCalendar(); renderEvents();
+   await Promise.all([loadPhotos(), loadJournal(), loadUnreadComments()]);
+ } catch (err) {
+   if (run !== loadVersion) return;
+   setText('syncStatus', '⚠️ 동기화 실패 · 다시 시도해 주세요');
+   message('일정을 불러오지 못했어요. 로그인이나 데이터 접근 권한을 확인해 주세요. (' + (err.message || '연결 오류') + ')', true);
+ } finally { if (run === loadVersion) loadingEntries = false; }
+}
+async function addEvent(event) {
+ event.preventDefault();
+ if (!user) return;
+ const title = $('eventInput').value.trim();
+ if (!title) return;
+ if (title.length > 100) { message('일정은 100자 이내로 적어줘.', true); return; }
+ const button = $('saveEventBtn'); button.disabled = true; message('저장 중…');
+ try {
+   const {error} = await client.from('events').insert({event_date:selected,title});
+   if (error) throw error;
+   $('eventInput').value = '';
+   message('💕 일정이 클라우드에 저장됐어!');
+   await loadEvents();
+ } catch (err) { message('저장에 실패했어. (' + (err.message || '연결 오류') + ')', true); }
+ finally { button.disabled = false; }
+}
+async function editEvent(item) {
+ const next = prompt('일정을 어떻게 수정할까?', item.title);
+ if (next === null || next.trim() === item.title) return;
+ if (!next.trim() || next.trim().length > 100) { message('일정을 1~100자로 입력해 줘.', true); return; }
+ try {
+   const {error} = await client.from('events').update({title:next.trim()}).eq('id',item.id);
+   if (error) throw error;
+   message('일정 수정 완료 💗'); await loadEvents();
+ } catch (err) { message('수정 실패: ' + (err.message || '연결 오류'), true); }
+}
+async function deleteEvent(item) {
+ if (!confirm('이 일정을 삭제할까?')) return;
+ try {
+   const {error} = await client.from('events').delete().eq('id',item.id);
+   if (error) throw error;
+   message('일정을 삭제했어.'); await loadEvents();
+ } catch (err) { message('삭제 실패: ' + (err.message || '연결 오류'), true); }
+}
+function oldEvents() {
+ try {
+   const obj = JSON.parse(localStorage.getItem('beomddu-events') || '{}');
+   if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return [];
+   return Object.entries(obj).flatMap(([event_date,titles]) => {
+     if (!/^\d{4}-\d{2}-\d{2}$/.test(event_date) || !Array.isArray(titles)) return [];
+     return titles.filter(title => typeof title === 'string' && title.trim())
+       .map(title => ({event_date, title:title.trim().slice(0,100)}));
+   });
+ } catch (_) { return []; }
+}
+function updateImport() {
+ const old = oldEvents();
+ const doneKey = user ? `beomddu-imported-${user.id}` : '';
+ let imported = false;
+ try { imported = !!localStorage.getItem(doneKey); } catch (_) {}
+ $('importPanel').hidden = !(user && old.length && !imported);
+ if (!imported) setText('importInfo', `이 휴대폰에 저장된 예전 일정 ${old.length}개가 있어요. 원한다면 클라우드로 옮길 수 있어요.`);
+}
+async function importOld() {
+ if (!user) return;
+ const old = oldEvents();
+ if (!old.length) { updateImport(); return; }
+ if (!confirm(`예전 일정 ${old.length}개를 클라우드에 한 번 가져올까?`)) return;
+ $('importBtn').disabled = true;
+ try {
+   const {error} = await client.from('events').insert(old);
+   if (error) throw error;
+   try { localStorage.setItem(`beomddu-imported-${user.id}`,'1'); } catch (_) {}
+   updateImport(); message(`이전 일정 ${old.length}개 가져오기 완료 💗`); await loadEvents();
+ } catch (err) { message('이전 일정 가져오기 실패: ' + (err.message || '연결 오류'), true); }
+ finally { $('importBtn').disabled = false; }
+}
+async function enterApp(nextUser) {
+ if (!nextUser) { showLogin(); return; }
+ if (user && user.id === nextUser.id && !$('appView').hidden) return;
+ user = nextUser;
+ setText('whoami', `🔐 ${nextUser.email || '로그인됨'}`);
+ show('app');
+ renderCalendar(); renderEvents(); updateImport();
+ await loadProfiles();
+ await loadEvents();
+}
+async function signIn(e) {
+ e.preventDefault();
+ const button = $('loginBtn'); button.disabled = true; button.textContent='로그인 중…'; setText('loginError','');
+ try {
+   const {data,error} = await client.auth.signInWithPassword({
+     email:$('emailInput').value.trim(), password:$('passwordInput').value
+   });
+   if (error) throw error;
+   $('passwordInput').value='';
+   await enterApp(data.user);
+ } catch (err) {
+   const msg = err.message || '';
+   setText('loginError', /invalid login credentials/i.test(msg) ? '이메일이나 비밀번호를 다시 확인해 줘.' : '로그인 오류: ' + msg);
+ } finally { button.disabled=false; button.textContent='로그인하기 💗'; }
+}
+$('showSignupBtn').addEventListener('click', () => {
+ const form=$('signupForm'); form.hidden=!form.hidden;
+ $('showSignupBtn').textContent=form.hidden?'💕 범이 회원가입하기':'회원가입 닫기';
+});
+async function signUp(e) {
+ e.preventDefault();
+ if (!client) return;
+ const email=$('signupEmail').value.trim();
+ const password=$('signupPassword').value;
+ const confirmation=$('signupConfirm').value;
+ const status=$('signupStatus');
+ if (password!==confirmation) { status.textContent='비밀번호가 서로 달라요. 다시 확인해 줘.'; return; }
+ if (password.length<8) { status.textContent='비밀번호는 8자 이상 입력해 줘.'; return; }
+ const btn=$('signupBtn');btn.disabled=true;status.textContent='계정 만드는 중…';
+ try {
+  const {data,error}=await client.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname}});
+  if(error)throw error;
+  $('signupPassword').value='';$('signupConfirm').value='';
+  status.textContent=data.session
+    ? '💗 가입 요청이 처리됐어! 공유 달력은 관리자 권한 승인 후 이용할 수 있어.'
+    : '💌 가입 요청이 접수됐어! 이메일 인증 메일을 확인해 줘. 공유 달력은 관리자 승인 후 이용할 수 있어.';
+ } catch(err) { status.textContent='회원가입 실패: '+(err.message||'오류')+' (회원가입 허용 설정도 확인해 줘.)'; }
+ finally {btn.disabled=false;}
+}
+$('signupForm').addEventListener('submit',signUp);
+async function signOut() {
+ if (!client) return;
+ try { const {error} = await client.auth.signOut(); if (error) throw error; showLogin(); }
+ catch (err) { message('로그아웃 오류: '+(err.message || '연결 오류'),true); }
+}
+$('loginForm').addEventListener('submit',signIn);
+$('eventForm').addEventListener('submit',addEvent);
+$('photoForm').addEventListener('submit',uploadPhotos);
+$('nicknameForm').addEventListener('submit',saveNickname);
+$('journalForm').addEventListener('submit',saveJournal);
+$('journalInput').addEventListener('input',()=>{journalDirty=true;});
+$('journalDeleteBtn').addEventListener('click',deleteJournal);
+$('commentForm').addEventListener('submit',addComment);
+$('logoutBtn').addEventListener('click',signOut);
+$('importBtn').addEventListener('click',importOld);
+$('refreshBtn').addEventListener('click',loadEvents);
+$('prevMonth').addEventListener('click',() => { month=new Date(month.getFullYear(),month.getMonth()-1,1); selected=dateKey(month); entries=[];photos=[];covers.clear();++photoLoadVersion;journal=null;comments=[];journalDataDate='';++journalLoadVersion;renderJournal();renderCalendar();renderEvents();renderPhotoGallery();loadEvents(); });
+$('nextMonth').addEventListener('click',() => { month=new Date(month.getFullYear(),month.getMonth()+1,1); selected=dateKey(month); entries=[];photos=[];covers.clear();++photoLoadVersion;journal=null;comments=[];journalDataDate='';++journalLoadVersion;renderJournal();renderCalendar();renderEvents();renderPhotoGallery();loadEvents(); });
+(async function start() {
+ if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+   $('starting').innerHTML = '<h2>연결 오류</h2><p class="muted small">Supabase 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.</p>';
+   return;
+ }
+ try {
+   client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+     auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+   });
+   client.auth.onAuthStateChange((event,session) => {
+     if (event === 'SIGNED_OUT') { showLogin(); return; }
+     if (event === 'SIGNED_IN' && session?.user) {
+       setTimeout(() => { if (!user || user.id !== session.user.id) enterApp(session.user); },0);
+     }
+   });
+   const {data,error} = await client.auth.getSession();
+   if (error) throw error;
+   if (data.session?.user) await enterApp(data.session.user);
+   else showLogin();
+ } catch (err) { showLogin('연결을 확인해 주세요: ' + (err.message || '연결 오류')); }
+})();
+setInterval(() => { if (user && !document.hidden && !loadingEntries && !loadingPhotos) loadEvents(); },30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && user) loadEvents(); });
+</script>
+</body>
+</html>
