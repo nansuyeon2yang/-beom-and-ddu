@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#fff7fa">
-  <meta name="description" content="범이와뚜, 우리 둘만의 작은 기록 공간">
-  <title>범이와뚜 💗</title>
+  <meta name="description" content="범이와뚜">
+  <title>범이와뚜</title>
   <style>
     :root { color-scheme:light; font-family:system-ui,-apple-system,'Noto Sans KR',sans-serif; --bg:#fff7fa; --card:#fff; --ink:#342b35; --muted:#7a6f79; --border:#f4dce5; --subtle:#f8e3eb; --accent:#e17c9d; --accent-dark:#b94d73; --shadow:0 10px 28px rgba(93,45,66,.055); }
     body.dark { color-scheme:dark; --bg:#201c24; --card:#302934; --ink:#faf2f7; --muted:#c3b8c2; --border:#51414e; --subtle:#483340; --accent:#db779e; --accent-dark:#f2b9d0; --shadow:0 10px 28px rgba(0,0,0,.15); }
@@ -76,13 +76,30 @@
     .entry-category{display:inline-block;padding:3px 8px;border-radius:6px;font-size:11px;margin-bottom:4px}
     .entry-period{display:block;font-size:11px;color:var(--muted);margin-top:3px}
     .entry-content{flex:1;min-width:0}
+
+    /* Month view: a single event bar spans its dates within each week. */
+    #calendar.days{display:flex;flex-direction:column;gap:7px}
+    .calendar-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));column-gap:4px;row-gap:3px;min-height:79px;position:relative;isolation:isolate;border-bottom:1px solid var(--border);padding-bottom:5px}
+    .calendar-week:last-child{border-bottom:0}
+    .calendar-week .day{grid-row:1/-1;min-height:0;padding:6px 0 0;gap:0;align-self:stretch;justify-content:flex-start;z-index:0;min-width:0}
+    .calendar-week .day:active{transform:none}
+    .calendar-week .day:focus-visible{z-index:1;outline-offset:-2px}
+    .calendar-week .day .unread-comment-dot{top:3px;right:3px;width:7px;height:7px}
+    .calendar-week .event-bar{z-index:2;pointer-events:none;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;text-align:center;align-self:stretch;font-size:10px;line-height:19px;padding:0 3px;margin:0 1px;border-radius:5px}
+    .calendar-week .event-bar.continues-left{border-top-left-radius:0;border-bottom-left-radius:0;margin-left:0}
+    .calendar-week .event-bar.continues-right{border-top-right-radius:0;border-bottom-right-radius:0;margin-right:0}
+    .calendar-week .calendar-photo{z-index:2;pointer-events:none;min-width:0;min-height:0;margin:0 3px;display:grid;place-items:center;overflow:hidden;border-radius:6px}
+    .calendar-week .calendar-photo .cover-thumb{margin:0;width:100%;height:42px}
+    .calendar-week .calendar-photo .photo-badge{font-size:15px}
+    .calendar-week .calendar-overflow{z-index:2;pointer-events:none;font-size:10px;text-align:center;line-height:16px;color:var(--muted)}
+    @media (max-width:380px){.calendar-week{column-gap:2px}.calendar-week .event-bar{font-size:9px;padding:0 2px}.week{gap:2px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
  <main class="shell">
   <header class="top">
-    <div><h1>💕 범이와뚜</h1><p class="subtitle">우리 둘만의 작은 기록 공간</p></div>
+    <div><h1>범이와뚜</h1></div>
     <button class="theme" id="themeBtn" type="button" aria-label="라이트·다크모드 전환">🌙</button>
   </header>
   <section id="starting" class="panel" aria-live="polite"><p class="muted">달력을 준비하고 있어요… 💗</p></section>
@@ -322,44 +339,88 @@ function message(text, bad = false) {
  setText('status', text);
  $('status').style.color = bad ? '#bd4363' : 'var(--muted)';
 }
+// Allocate whole event segments to non-overlapping lanes, one segment per week.
+function layoutWeekEvents(weekDates, rows) {
+  const occupied = Array.from({length:3},()=>Array(7).fill(false));
+  const bars=[], overflow=Array(7).fill(0);
+  const sorted=[...rows].sort((a,b)=>a.event_date.localeCompare(b.event_date)||
+    (b.end_date||b.event_date).localeCompare(a.end_date||a.event_date)||
+    String(a.id).localeCompare(String(b.id)));
+  for (const item of sorted) {
+    const cols=weekDates.map((d,i)=>d && onDate(item,d)?i:-1).filter(i=>i>=0);
+    if(!cols.length) continue;
+    const first=cols[0],last=cols[cols.length-1];
+    const lane=occupied.findIndex(line=>cols.every(i=>!line[i]));
+    if(lane<0){cols.forEach(i=>overflow[i]++);continue;}
+    cols.forEach(i=>occupied[lane][i]=true);
+    bars.push({item,first,last,lane,
+      continuesLeft:item.event_date<weekDates[first],
+      continuesRight:(item.end_date||item.event_date)>weekDates[last]});
+  }
+  return {bars,overflow,laneCount:bars.reduce((n,b)=>Math.max(n,b.lane+1),0)};
+}
 function renderCalendar() {
- setText('monthTitle', `${month.getFullYear()}년 ${month.getMonth()+1}월`);
- const cal = $('calendar');
- cal.replaceChildren();
- const start = new Date(month.getFullYear(), month.getMonth(), 1);
- const days = new Date(month.getFullYear(), month.getMonth()+1, 0).getDate();
- for (let n = 0; n < start.getDay(); n++) {
-   const blank = document.createElement('div'); blank.className = 'empty-day'; cal.append(blank);
- }
- for (let n = 1; n <= days; n++) {
-   const date = dateKey(new Date(month.getFullYear(), month.getMonth(), n));
-    const dayEntries = entries.filter(e => onDate(e,date));
-    const count = dayEntries.length;
-   const datePhotos = photos.filter(p => p.memory_date === date);
-   const cover = datePhotos.find(p => p.id === covers.get(date)) || datePhotos[0];
-   const button = document.createElement('button');
-   button.type = 'button';
-   button.className = 'day' + (date === selected ? ' selected' : '') + (date === dateKey(today) ? ' today' : '') + (cover ? ' has-photo' : '');
-   button.setAttribute('aria-label', `${date} 일정 ${count}개`);
-   const label = document.createElement('span'); label.textContent = String(n); button.append(label);
-   if (unreadCommentDates.has(date)) { const dot=document.createElement('span');dot.className='unread-comment-dot';dot.title='새 댓글';dot.setAttribute('aria-label','새 댓글');button.append(dot); }
-    for(const entry of dayEntries.slice(0,3)){
-      const chip=document.createElement('span');
-      chip.className='event-chip';
-      chip.dataset.category=eventCategory(entry);
-      chip.textContent=entry.title;
-      chip.title=`${CATEGORY_NAMES[eventCategory(entry)]}: ${entry.title}`;
-      button.append(chip);
+  setText('monthTitle', `${month.getFullYear()}년 ${month.getMonth()+1}월`);
+  const cal=$('calendar');cal.replaceChildren();
+  const start=new Date(month.getFullYear(),month.getMonth(),1);
+  const days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
+  const firstCol=start.getDay();
+  const weekCount=Math.ceil((firstCol+days)/7);
+  for(let w=0;w<weekCount;w++){
+    const dates=Array.from({length:7},(_,c)=>{
+      const day=w*7+c-firstCol+1;
+      return day>=1 && day<=days?dateKey(new Date(month.getFullYear(),month.getMonth(),day)):null;
+    });
+    const {bars,overflow,laneCount}=layoutWeekEvents(dates,entries);
+    const week=document.createElement('div');week.className='calendar-week';
+    const weekCovers=dates.map(date=>{
+      if(!date)return null;
+      const list=photos.filter(p=>p.memory_date===date);
+      return list.find(p=>p.id===covers.get(date))||list[0]||null;
+    });
+    const hasPhoto=weekCovers.some(Boolean), hasOverflow=overflow.some(n=>n>0);
+    const rows=['28px',...Array(laneCount).fill('19px')];
+    const overflowRow=hasOverflow?rows.push('16px'):0;
+    const photoRow=hasPhoto?rows.push('44px'):0;
+    rows.push('minmax(5px,1fr)');
+    week.style.gridTemplateRows=rows.join(' ');
+    dates.forEach((date,col)=>{
+      if(!date)return;
+      const cover=weekCovers[col];
+      const dayEntries=entries.filter(e=>onDate(e,date));
+      const button=document.createElement('button');button.type='button';
+      button.className='day'+(date===selected?' selected':'')+(date===dateKey(new Date())?' today':'')+(cover?' has-photo':'');
+      button.style.gridColumn=String(col+1);
+      button.setAttribute('aria-label',`${date} 일정 ${dayEntries.length}개${cover?', 사진 있음':''}${unreadCommentDates.has(date)?', 새 댓글':''}`);
+      button.setAttribute('aria-pressed',String(date===selected));
+      const label=document.createElement('span');label.textContent=String(Number(date.slice(-2)));button.append(label);
+      if(unreadCommentDates.has(date)){
+        const dot=document.createElement('span');dot.className='unread-comment-dot';dot.title='새 댓글';dot.setAttribute('aria-hidden','true');button.append(dot);
+      }
+      button.addEventListener('click',()=>{changeSelected(date);renderCalendar();renderEvents();renderPhotoGallery();loadJournal(true);});
+      week.append(button);
+      if(hasOverflow && overflow[col]){
+        const more=document.createElement('span');more.className='calendar-overflow';more.textContent=`+${overflow[col]}`;
+        more.style.gridColumn=String(col+1);more.style.gridRow=String(overflowRow);week.append(more);
+      }
+      if(cover){
+        const holder=document.createElement('div');holder.className='calendar-photo';
+        holder.style.gridColumn=String(col+1);holder.style.gridRow=String(photoRow);
+        const src=photoSignedCache.get(cover.storage_path)?.url;
+        if(src){const img=document.createElement('img');img.className='cover-thumb';img.src=src;img.alt=`${date} 대표 사진`;img.loading='lazy';holder.append(img);}
+        else{const badge=document.createElement('span');badge.className='photo-badge';badge.textContent='📸';holder.append(badge);}
+        week.append(holder);
+      }
+    });
+    for(const bar of bars){
+      const chip=document.createElement('span');chip.className='event-chip event-bar'+(bar.continuesLeft?' continues-left':'')+(bar.continuesRight?' continues-right':'');
+      chip.dataset.category=eventCategory(bar.item);chip.textContent=bar.item.title;
+      chip.title=`${CATEGORY_NAMES[eventCategory(bar.item)]}: ${bar.item.title}`;
+      chip.style.gridColumn=`${bar.first+1} / ${bar.last+2}`;
+      chip.style.gridRow=String(bar.lane+2);week.append(chip);
     }
-    if(count>3){const more=document.createElement('span');more.className='count';more.textContent=`+${count-3}`;button.append(more);}
-   if (cover) {
-     const src = photoSignedCache.get(cover.storage_path)?.url;
-     if (src) { const img=document.createElement('img');img.className='cover-thumb';img.src=src;img.alt=`${date} 대표 사진`;img.loading='lazy';button.append(img); }
-     else {const badge=document.createElement('span');badge.textContent='📸';button.append(badge);}
-   }
-   button.addEventListener('click', () => { changeSelected(date); renderCalendar(); renderEvents(); renderPhotoGallery(); loadJournal(true); });
-   cal.append(button);
- }
+    cal.append(week);
+  }
 }
 function renderEvents() {
  setText('selectedTitle', `${selected}의 기록`);
