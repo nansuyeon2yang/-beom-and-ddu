@@ -94,29 +94,27 @@
     .calendar-week .calendar-overflow{z-index:2;pointer-events:none;font-size:10px;text-align:center;line-height:16px;color:var(--muted)}
     @media (max-width:380px){.calendar-week{column-gap:2px}.calendar-week .event-bar{font-size:9px;padding:0 2px}.week{gap:2px}}
 
-    body.day-open{overflow:hidden}
-    .date-hint{text-align:center;margin:-7px 0 18px}
-    #dayDialog{color:var(--ink);background:var(--card);border:1px solid var(--border);border-radius:24px 24px 0 0;padding:0;width:min(100%,560px);max-width:100%;height:min(88vh,780px);height:min(88dvh,780px);max-height:94%;margin:auto auto 0;overflow:hidden;box-shadow:0 -8px 45px #0003}
-    #dayDialog[open]{display:flex;flex-direction:column}
-    #dayDialog::backdrop{background:#17101d77}
-    .day-head{flex:none;padding:14px 15px 11px;border-bottom:1px solid var(--border);background:var(--card)}
-    .day-head h2{margin:0;font-size:18px}.day-head #closeDay{font-size:18px;min-width:44px;min-height:44px;padding:8px}
-    .day-actions{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:9px}
-    .day-actions button{font-weight:650;font-size:13px;padding:11px 2px;min-height:44px;white-space:nowrap}
-    #dayBody{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:12px 15px max(24px,env(safe-area-inset-bottom));scroll-padding:12px}
+    .selected-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:16px;margin-bottom:12px;scroll-margin-top:12px}
+    .selected-toolbar h2{margin:0;font-size:17px}.selected-toolbar .small{margin:3px 0 0}
+    #addToggle{font-size:24px;line-height:1;min-width:44px;min-height:44px;padding:8px 12px}
+    .day-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:0 0 12px}
+    .day-actions button{font-weight:650;font-size:13px;padding:10px 4px;min-height:44px}
+    #dayEditor .form-row{margin:0 0 12px;padding:13px;border:1px solid var(--border);border-radius:15px;background:var(--card)}
+    #dayEditor .small{margin:6px 0;overflow-wrap:anywhere}
+    #dayDetails{scroll-margin-top:12px}#dayDetails h2{margin:0 0 12px}
+    #dayBody{min-width:0}
     .day-section{padding:12px 0;border-bottom:1px solid var(--border);scroll-margin-top:8px}
     .day-section:first-child{padding-top:0}.day-section:last-child{border:0}
     .day-section h3{margin:0 0 5px}.day-section p{margin:6px 0}.day-section .entry-list{margin-top:2px}
     #status:empty,#photoStatus:empty,#journalStatus:empty,#commentStatus:empty{display:none}
-    #dayDialog .journal-meta{margin:3px 0}.journal-preview{white-space:pre-wrap;overflow-wrap:anywhere;max-height:90px;overflow:auto}
-    #dayDialog #photoGrid{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;padding:2px 1px 6px;margin-top:5px;scroll-snap-type:x proximity}
-    #dayDialog .photo-item{flex:0 0 138px;scroll-snap-align:start}
-    #dayDialog .photo-item img,#dayDialog .photo-placeholder{height:108px}
-    #dayDialog .photo-actions{padding:4px;gap:3px}#dayDialog .photo-actions button{font-size:11px;padding:6px 5px}
+    #dayDetails .journal-meta{margin:3px 0}.journal-preview{white-space:pre-wrap;overflow-wrap:anywhere;max-height:90px;overflow:auto}
+    #dayDetails #photoGrid{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;padding:2px 1px 6px;margin-top:5px;scroll-snap-type:x proximity}
+    #dayDetails .photo-item{flex:0 0 138px;scroll-snap-align:start}
+    #dayDetails .photo-item img,#dayDetails .photo-placeholder{height:108px}
+    #dayDetails .photo-actions{padding:4px;gap:3px}#dayDetails .photo-actions button{font-size:11px;padding:6px 5px}
     #commentInput{min-height:64px;padding:10px 12px}#commentForm .field{margin:0}
     #commentForm{grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:7px}
     #commentForm .field{grid-column:1/-1}#commentSaveBtn{width:auto;min-height:44px;white-space:nowrap;padding:10px}
-    @media(min-width:700px){#dayDialog{margin:auto;border-radius:24px;max-height:90%}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -159,32 +157,19 @@
       </form>
       <p id="nicknameStatus" class="small" role="status"></p>
     </details>
-    <section class="panel">
-      <div class="cal-nav"><button id="prevMonth" class="nav-btn" type="button" aria-label="이전 달">❮</button><strong id="monthTitle"></strong><button id="nextMonth" class="nav-btn" type="button" aria-label="다음 달">❯</button></div>
-       <div class="event-legend" aria-label="일정 색상">
-         <span class="event-chip" data-category="ours">우리</span>
-         <span class="event-chip" data-category="beom">범이</span>
-         <span class="event-chip" data-category="ddu">뚜</span>
-       </div>
-       <div class="week" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
-      <div id="calendar" class="days"></div>
-      <div class="sync-line"><span id="syncStatus">일정을 불러오는 중…</span><button id="refreshBtn" type="button" style="padding:5px 9px;font-size:12px">↻ 새로고침</button></div>
-    </section>
-    <p class="date-hint muted small">날짜를 누르면 일정·사진·추억 글·댓글을 바로 볼 수 있어요.</p>
-    <dialog id="dayDialog" aria-labelledby="selectedTitle">
-      <div class="day-head">
-        <div class="row between"><h2 id="selectedTitle"></h2><button type="button" id="closeDay" aria-label="날짜 기록 닫기">✕</button></div>
-        <div class="day-actions">
-          <button type="button" id="quickEvent">＋ 일정</button>
-          <button type="button" id="quickJournal">✎ 글</button>
-          <button type="button" id="quickPhoto">＋ 사진</button>
-          <button type="button" id="quickComment">💬 댓글</button>
-        </div>
+    <section class="panel" id="calendarPanel">
+      <div class="selected-toolbar" id="selectedToolbar">
+        <div><h2 id="selectedTitle" aria-live="polite"></h2><p class="small muted">날짜를 선택하고 ＋로 추가해요.</p></div>
+        <button type="button" id="addToggle" class="primary" aria-label="선택한 날짜에 추가" aria-expanded="false" aria-controls="addMenu">＋</button>
       </div>
-      <div id="dayBody">
-        <section class="day-section" id="eventSection">
-          <h3>이 날의 일정</h3>
-      <form id="eventForm" class="form-row" hidden>
+      <div class="day-actions" id="addMenu" hidden>
+        <button type="button" id="quickEvent">＋ 일정 추가</button>
+        <button type="button" id="quickJournal">✎ 추억 글</button>
+        <button type="button" id="quickPhoto">＋ 사진 추가</button>
+        <button type="button" id="quickComment">💬 댓글 쓰기</button>
+      </div>
+      <div id="dayEditor">
+<form id="eventForm" class="form-row" hidden>
         <fieldset class="category-options">
           <legend class="field">누구의 일정인가요?</legend>
           <label class="category-choice"><input type="radio" name="eventCategory" value="ours" checked><span data-category="ours">우리</span></label>
@@ -200,34 +185,56 @@
         <button id="saveEventBtn" class="primary full" type="submit">일정 저장하기</button>
         <button id="cancelEventEdit" type="button">닫기</button>
       </form>
-          <div id="status" class="small" role="status" aria-live="polite"></div>
-          <div id="events" class="entry-list"></div>
-        </section>
-        <section class="day-section" id="journalSection">
-          <h3>추억 글</h3>
-          <p id="journalPreview" class="journal-preview muted small"></p>
-        <form id="journalForm" class="form-row" hidden>
+<form id="journalForm" class="form-row" hidden>
           <label class="field" for="journalInput">우리의 이야기 (최대 3,000자)</label>
           <textarea id="journalInput" maxlength="3000" rows="5" required placeholder="오늘 우리가 함께한 순간을 적어봐 💗"></textarea>
           <button id="journalSaveBtn" class="primary full" type="submit">이 날짜의 추억 저장하기 💗</button>
           <button id="cancelJournal" type="button">닫기</button>
         </form>
-        <div class="row between" style="margin-top:10px">
-          <span id="journalMeta" class="journal-meta">추억 글 불러오는 중…</span>
-          <button id="journalDeleteBtn" type="button" hidden style="font-size:12px;padding:7px 9px">글 삭제</button>
-        </div>
-        <p id="journalStatus" class="small" role="status" aria-live="polite"></p>
-        </section>
-        <section class="day-section" id="photoSection">
-          <div class="row between"><h3>이 날의 사진</h3><span id="photoCount" class="small muted"></span></div>
-        <form id="photoForm" class="form-row" hidden>
+<form id="photoForm" class="form-row" hidden>
           <label class="field" for="photoInput">사진 선택 (한 번에 최대 10장)</label>
           <input id="photoInput" type="file" accept="image/*" multiple required>
           <button id="uploadPhotoBtn" class="primary full" type="submit">이 날짜에 사진 올리기 💗</button>
           <p class="photo-help">사진은 긴 변 1600px로 줄여 업로드해요. 원본은 따로 보관해 주세요.</p>
           <button id="cancelPhoto" type="button">닫기</button>
         </form>
-          <p id="photoStatus" class="small" role="status" aria-live="polite"></p>
+<div id="status" class="small" role="status" aria-live="polite"></div>
+<p id="journalStatus" class="small" role="status" aria-live="polite"></p>
+<p id="photoStatus" class="small" role="status" aria-live="polite"></p>
+      </div>
+      <div class="cal-nav"><button id="prevMonth" class="nav-btn" type="button" aria-label="이전 달">❮</button><strong id="monthTitle"></strong><button id="nextMonth" class="nav-btn" type="button" aria-label="다음 달">❯</button></div>
+       <div class="event-legend" aria-label="일정 색상">
+         <span class="event-chip" data-category="ours">우리</span>
+         <span class="event-chip" data-category="beom">범이</span>
+         <span class="event-chip" data-category="ddu">뚜</span>
+       </div>
+       <div class="week" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+      <div id="calendar" class="days"></div>
+      <div class="sync-line"><span id="syncStatus">일정을 불러오는 중…</span><button id="refreshBtn" type="button" style="padding:5px 9px;font-size:12px">↻ 새로고침</button></div>
+    </section>
+    <section class="panel" id="dayDetails" aria-labelledby="detailTitle">
+      <h2 id="detailTitle"></h2>
+      <div id="dayBody">
+        <section class="day-section" id="eventSection">
+          <h3>이 날의 일정</h3>
+      
+          
+          <div id="events" class="entry-list"></div>
+        </section>
+        <section class="day-section" id="journalSection">
+          <h3>추억 글</h3>
+          <p id="journalPreview" class="journal-preview muted small"></p>
+        
+        <div class="row between" style="margin-top:10px">
+          <span id="journalMeta" class="journal-meta">추억 글 불러오는 중…</span>
+          <button id="journalDeleteBtn" type="button" hidden style="font-size:12px;padding:7px 9px">글 삭제</button>
+        </div>
+        
+        </section>
+        <section class="day-section" id="photoSection">
+          <div class="row between"><h3>이 날의 사진</h3><span id="photoCount" class="small muted"></span></div>
+        
+          
           <div id="photoGrid" class="photo-grid" aria-label="사진 모아보기"></div>
         </section>
         <section class="day-section" id="commentSection">
@@ -241,7 +248,7 @@
           <div id="commentList" class="comment-list"></div>
         </section>
       </div>
-    </dialog>
+    </section>
     <section id="importPanel" class="panel" hidden>
       <h3>💌 이전 달력의 일정이 있어요!</h3>
       <p class="muted small" id="importInfo">이 휴대폰에 저장된 옛 일정을 찾아왔어요.</p>
@@ -350,35 +357,38 @@ let journalReadyDate = '', commentBusy = false;
 // technical anchor for days with comments but no written journal.
 const COMMENT_ANCHOR = '[범이와뚜: 날짜 댓글용 빈 기록]';
 const hasStory = () => !!journal && journal.body !== COMMENT_ANCHOR;
+let dateViewed=false;
+function showAddMenu(open) {
+  $('addMenu').hidden=!open;
+  $('addToggle').setAttribute('aria-expanded',String(open));
+  $('addToggle').textContent=open?'−':'＋';
+}
 function resetDayUI() {
-  resetEventForm();
+  resetEventForm(); showAddMenu(false);
   for (const id of ['eventForm','journalForm','photoForm']) $(id).hidden=true;
   for (const id of ['status','journalStatus','photoStatus','commentStatus']) setText(id,'');
   $('commentInput').value=''; $('photoInput').value='';
   journalDirty=false; journalDraftDate='';
 }
+function canLeaveDay() {
+  if (commentBusy || ['saveEventBtn','journalSaveBtn','uploadPhotoBtn'].some(id=>$(id).disabled)) {
+    alert('저장 또는 업로드가 끝난 뒤 날짜를 바꿔 줘.'); return false;
+  }
+  return !(journalDirty || $('eventInput').value.trim() || $('commentInput').value.trim() || $('photoInput').files.length || $('eventEnd').value || $('eventStart').value!==selected || document.querySelector('input[name="eventCategory"]:checked')?.value!=='ours') || confirm('저장하지 않은 내용이 있어요. 날짜를 바꿀까요?');
+}
 function openDay(date) {
-  changeSelected(date); resetDayUI();
+  if(date!==selected){
+    if(!canLeaveDay())return;
+    changeSelected(date); resetDayUI();
+  }
+  dateViewed=true;
   renderCalendar(); renderEvents(); renderPhotoGallery();
   loadJournal(true);
-  if (!$('dayDialog').open) $('dayDialog').showModal();
-  document.body.classList.add('day-open');
-  $('dayBody').scrollTop=0;
-}
-function closeDay(force=false) {
-  if (!$('dayDialog').open) return;
-  if (!force) {
-    if (commentBusy || ['saveEventBtn','journalSaveBtn','uploadPhotoBtn'].some(id=>$(id).disabled)) {
-      alert('저장 또는 업로드가 끝난 뒤 닫아 줘.'); return;
-    }
-    if ((journalDirty || $('eventInput').value.trim() || $('commentInput').value.trim() || $('photoInput').files.length) && !confirm('저장하지 않은 내용이 있어요. 닫을까요?')) return;
-  }
-  $('dayDialog').close(); document.body.classList.remove('day-open');
-  resetDayUI();
 }
 function revealForm(form, section, focusId) {
-  $(form).hidden=false;
-  $(section).scrollIntoView({block:'start',behavior:'smooth'});
+  showAddMenu(false);
+  for(const id of ['eventForm','journalForm','photoForm']) $(id).hidden=id!==form;
+  $('selectedToolbar').scrollIntoView({block:'start',behavior:'smooth'});
   if(focusId) $(focusId).focus({preventScroll:true});
 }
 
@@ -401,7 +411,7 @@ function show(section) {
  $('appView').hidden = section !== 'app';
 }
 function showLogin(message = '') {
-  closeDay(true);
+  dateViewed=false; resetDayUI();
   user = null; journalReadyDate=''; commentBusy=false;
   clearWidget();
   resetEventForm();
@@ -501,12 +511,14 @@ function renderCalendar() {
   }
 }
 function renderEvents() {
- setText('selectedTitle', `${Number(selected.slice(5,7))}월 ${Number(selected.slice(8,10))}일의 기록`);
+ const dateLabel=`${Number(selected.slice(5,7))}월 ${Number(selected.slice(8,10))}일`;
+ setText('selectedTitle', `${dateLabel} 선택됨`);
+ setText('detailTitle', `${dateLabel}의 기록`);
  const container = $('events'); container.replaceChildren();
  const dayEvents = entries.filter(item => onDate(item,selected));
  if (!dayEvents.length) {
    const empty = document.createElement('p'); empty.className = 'muted small';
-   empty.textContent = '등록된 일정이 없어요. 위의 ＋ 일정을 눌러 추가해요.'; container.append(empty); return;
+   empty.textContent = '등록된 일정이 없어요. 위의 ＋ 버튼으로 추가해요.'; container.append(empty); return;
  }
  dayEvents.forEach(item => {
    const wrap = document.createElement('div'); wrap.className = 'entry';
@@ -864,7 +876,7 @@ async function loadEvents() {
    const now = new Date();
    setText('syncStatus', `☁️ 동기화 완료 · ${pad(now.getHours())}:${pad(now.getMinutes())}`);
    renderCalendar(); renderEvents();
-    await Promise.all([loadPhotos(), loadJournal($('dayDialog').open), loadUnreadComments(), syncWidget()]);
+    await Promise.all([loadPhotos(), loadJournal(dateViewed), loadUnreadComments(), syncWidget()]);
  } catch (err) {
    if (run !== loadVersion) return;
     clearWidget();
@@ -956,7 +968,7 @@ async function enterApp(nextUser) {
  if (user && user.id === nextUser.id && !$('appView').hidden) return;
   clearWidget();
   user = nextUser;
-  resetEventForm();
+  dateViewed=false; resetDayUI();
   setText('whoami', `🔐 ${nextUser.email || '로그인됨'}`);
  show('app');
  renderCalendar(); renderEvents(); updateImport();
@@ -1011,12 +1023,11 @@ async function signOut() {
 $('loginForm').addEventListener('submit',signIn);
 $('eventForm').addEventListener('submit',addEvent);
 $('cancelEventEdit').addEventListener('click',()=>{resetEventForm();$('eventForm').hidden=true;});
-$('closeDay').addEventListener('click',()=>closeDay());
-$('dayDialog').addEventListener('cancel',e=>{e.preventDefault();closeDay();});
+$('addToggle').addEventListener('click',()=>showAddMenu($('addMenu').hidden));
 $('quickEvent').addEventListener('click',()=>revealForm('eventForm','eventSection','eventInput'));
 $('quickJournal').addEventListener('click',()=>revealForm('journalForm','journalSection','journalInput'));
 $('quickPhoto').addEventListener('click',()=>revealForm('photoForm','photoSection'));
-$('quickComment').addEventListener('click',()=>{$('commentSection').scrollIntoView({block:'start',behavior:'smooth'});$('commentInput').focus({preventScroll:true});});
+$('quickComment').addEventListener('click',()=>{showAddMenu(false);$('commentSection').scrollIntoView({block:'start',behavior:'smooth'});$('commentInput').focus({preventScroll:true});});
 $('cancelJournal').addEventListener('click',()=>{if(journalDirty&&!confirm('작성 중인 글을 취소할까?'))return;journalDirty=false;$('journalForm').hidden=true;renderJournal();});
 $('cancelPhoto').addEventListener('click',()=>{$('photoInput').value='';$('photoForm').hidden=true;});
 $('eventStart').addEventListener('change',()=>{
@@ -1032,8 +1043,16 @@ $('commentForm').addEventListener('submit',addComment);
 $('logoutBtn').addEventListener('click',signOut);
 $('importBtn').addEventListener('click',importOld);
 $('refreshBtn').addEventListener('click',loadEvents);
-$('prevMonth').addEventListener('click',() => { month=new Date(month.getFullYear(),month.getMonth()-1,1); changeSelected(dateKey(month)); entries=[];photos=[];covers.clear();++photoLoadVersion;journal=null;comments=[];journalDataDate='';++journalLoadVersion;renderJournal();renderCalendar();renderEvents();renderPhotoGallery();loadEvents(); });
-$('nextMonth').addEventListener('click',() => { month=new Date(month.getFullYear(),month.getMonth()+1,1); changeSelected(dateKey(month)); entries=[];photos=[];covers.clear();++photoLoadVersion;journal=null;comments=[];journalDataDate='';++journalLoadVersion;renderJournal();renderCalendar();renderEvents();renderPhotoGallery();loadEvents(); });
+function moveMonth(delta) {
+ if(!canLeaveDay())return;
+ month=new Date(month.getFullYear(),month.getMonth()+delta,1);
+ changeSelected(dateKey(month)); resetDayUI(); dateViewed=false;
+ entries=[];photos=[];covers.clear();++photoLoadVersion;
+ journal=null;comments=[];journalDataDate='';journalReadyDate='';++journalLoadVersion;
+ renderJournal();renderCalendar();renderEvents();renderPhotoGallery();loadEvents();
+}
+$('prevMonth').addEventListener('click',()=>moveMonth(-1));
+$('nextMonth').addEventListener('click',()=>moveMonth(1));
 (async function start() {
  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
    $('starting').innerHTML = '<h2>연결 오류</h2><p class="muted small">Supabase 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.</p>';
