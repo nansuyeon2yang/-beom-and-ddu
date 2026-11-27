@@ -115,6 +115,29 @@
     #commentInput{min-height:64px;padding:10px 12px}#commentForm .field{margin:0}
     #commentForm{grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:7px}
     #commentForm .field{grid-column:1/-1}#commentSaveBtn{width:auto;min-height:44px;white-space:nowrap;padding:10px}
+
+    /* Compact month controls and weekend/holiday colors; keep existing calendar size. */
+    :root{--sunday:#c94859;--saturday:#426eb2}
+    body.dark{--sunday:#ff9eaa;--saturday:#a4c3ff}
+    .cal-nav{gap:3px;min-height:42px}
+    .cal-nav .nav-btn{background:transparent;min-width:30px;min-height:42px;padding:5px;font-size:15px;color:var(--muted)}
+    .cal-nav .nav-btn:disabled{cursor:default;opacity:.25}
+    .month-controls{display:flex;align-items:center;justify-content:center;gap:3px;min-width:0}
+    .month-select{position:relative;display:inline-flex;align-items:center;white-space:nowrap}
+    .month-select select{appearance:none;-webkit-appearance:none;border:0;border-radius:7px;background:transparent;color:var(--ink);font:600 16px/1.3 'Pretendard','Noto Sans KR',system-ui,sans-serif;letter-spacing:-.035em;min-height:42px;padding:5px 17px 5px 3px;cursor:pointer}
+    .month-select select option{background:var(--card);color:var(--ink)}
+    .month-select svg{position:absolute;right:3px;pointer-events:none;width:11px;height:11px;color:var(--ink)}
+    .month-select select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+    #todayMonth{display:grid;place-items:center;background:transparent;color:var(--ink);width:30px;min-height:42px;padding:0;flex-shrink:0}
+    #todayMonth svg{width:14px;height:14px}
+    .week span:first-child,.day.sunday .day-number,.day.holiday .day-number,.holiday-name{color:var(--sunday)}
+    .week span:last-child,.day.saturday:not(.holiday) .day-number{color:var(--saturday)}
+    .week span,.day-number{font-weight:600}
+    .day-number{font-size:13px;line-height:16px}
+    .holiday-name{font-size:10px;line-height:11px;font-weight:500;max-width:100%;padding:0 1px;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere;text-align:center}
+    #calendar{touch-action:pan-y pinch-zoom;user-select:none;-webkit-user-select:none}
+    .holiday-note{font-size:10px;color:var(--muted);margin:5px 0 0;line-height:1.5}
+    @media(max-width:350px){.month-controls{gap:0}.month-select select{font-size:15px}.holiday-name{font-size:9px}}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -202,7 +225,15 @@
 <p id="journalStatus" class="small" role="status" aria-live="polite"></p>
 <p id="photoStatus" class="small" role="status" aria-live="polite"></p>
       </div>
-      <div class="cal-nav"><button id="prevMonth" class="nav-btn" type="button" aria-label="이전 달">❮</button><strong id="monthTitle"></strong><button id="nextMonth" class="nav-btn" type="button" aria-label="다음 달">❯</button></div>
+      <div class="cal-nav">
+        <button id="prevMonth" class="nav-btn" type="button" aria-label="이전 달">❮</button>
+        <div class="month-controls" id="monthTitle">
+          <label class="month-select"><select id="yearSelect" aria-label="연도 선택"></select><svg viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg></label>
+          <label class="month-select"><select id="monthSelect" aria-label="월 선택"></select><svg viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4.5 6 7.5 9 4.5"/></svg></label>
+          <button id="todayMonth" type="button" aria-label="오늘로 돌아가기" title="오늘로 돌아가기"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v4h4M3.2 6.8a5.2 5.2 0 1 1 .6 4.5"/></svg></button>
+        </div>
+        <button id="nextMonth" class="nav-btn" type="button" aria-label="다음 달">❯</button>
+      </div>
        <div class="event-legend" aria-label="일정 색상">
          <span class="event-chip" data-category="ours">우리</span>
          <span class="event-chip" data-category="beom">범이</span>
@@ -210,6 +241,7 @@
        </div>
        <div class="week" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
       <div id="calendar" class="days"></div>
+       <p id="holidayNote" class="holiday-note" hidden>공휴일 예상 자료 · 추후 지정되는 임시공휴일 및 선거일은 변경될 수 있어요.</p>
       <div class="sync-line"><span id="syncStatus">일정을 불러오는 중…</span><button id="refreshBtn" type="button" style="padding:5px 9px;font-size:12px">↻ 새로고침</button></div>
     </section>
     <section class="panel" id="dayDetails" aria-labelledby="detailTitle">
@@ -270,6 +302,151 @@ const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate(
 const today = new Date();
 let month = new Date(today.getFullYear(), today.getMonth(), 1);
 let selected = dateKey(today);
+const YEAR_MIN=2025, YEAR_MAX=2030;
+// Korean public holiday data, 2025–2030. Lunar dates converted using KoreanLunarCalendar.
+// Legal basis: https://www.law.go.kr/LSW/lsInfoP.do?ancYnChk=0&lsId=002404
+// 2027 official almanac: https://www.kasa.go.kr/prog/bbsArticle/BBSMSTR_000000000018/view.do?bbsId=BBSMSTR_000000000018&nttId=B000000003234Li6nD2
+// 2028–2030 projected under current law; future one-off holidays and election days require updates.
+const KR_HOLIDAYS=Object.freeze({
+  "2025-01-01": "신정",
+  "2025-01-27": "임시공휴일",
+  "2025-01-28": "설날 연휴",
+  "2025-01-29": "설날",
+  "2025-01-30": "설날 연휴",
+  "2025-03-01": "삼일절",
+  "2025-03-03": "대체공휴일",
+  "2025-05-05": "어린이날·부처님오신날",
+  "2025-05-06": "대체공휴일",
+  "2025-06-03": "대통령선거",
+  "2025-06-06": "현충일",
+  "2025-08-15": "광복절",
+  "2025-10-03": "개천절",
+  "2025-10-05": "추석 연휴",
+  "2025-10-06": "추석",
+  "2025-10-07": "추석 연휴",
+  "2025-10-08": "대체공휴일",
+  "2025-10-09": "한글날",
+  "2025-12-25": "성탄절",
+  "2026-01-01": "신정",
+  "2026-02-16": "설날 연휴",
+  "2026-02-17": "설날",
+  "2026-02-18": "설날 연휴",
+  "2026-03-01": "삼일절",
+  "2026-03-02": "대체공휴일",
+  "2026-05-01": "노동절",
+  "2026-05-05": "어린이날",
+  "2026-05-24": "부처님오신날",
+  "2026-05-25": "대체공휴일",
+  "2026-06-03": "지방선거",
+  "2026-06-06": "현충일",
+  "2026-07-17": "제헌절",
+  "2026-08-15": "광복절",
+  "2026-08-17": "대체공휴일",
+  "2026-09-24": "추석 연휴",
+  "2026-09-25": "추석",
+  "2026-09-26": "추석 연휴",
+  "2026-10-03": "개천절",
+  "2026-10-05": "대체공휴일",
+  "2026-10-09": "한글날",
+  "2026-12-25": "성탄절",
+  "2027-01-01": "신정",
+  "2027-02-06": "설날 연휴",
+  "2027-02-07": "설날",
+  "2027-02-08": "설날 연휴",
+  "2027-02-09": "대체공휴일",
+  "2027-03-01": "삼일절",
+  "2027-05-01": "노동절",
+  "2027-05-03": "대체공휴일",
+  "2027-05-05": "어린이날",
+  "2027-05-13": "부처님오신날",
+  "2027-06-06": "현충일",
+  "2027-07-17": "제헌절",
+  "2027-07-19": "대체공휴일",
+  "2027-08-15": "광복절",
+  "2027-08-16": "대체공휴일",
+  "2027-09-14": "추석 연휴",
+  "2027-09-15": "추석",
+  "2027-09-16": "추석 연휴",
+  "2027-10-03": "개천절",
+  "2027-10-04": "대체공휴일",
+  "2027-10-09": "한글날",
+  "2027-10-11": "대체공휴일",
+  "2027-12-25": "성탄절",
+  "2027-12-27": "대체공휴일",
+  "2028-01-01": "신정",
+  "2028-01-26": "설날 연휴",
+  "2028-01-27": "설날",
+  "2028-01-28": "설날 연휴",
+  "2028-03-01": "삼일절",
+  "2028-05-01": "노동절",
+  "2028-05-02": "부처님오신날",
+  "2028-05-05": "어린이날",
+  "2028-06-06": "현충일",
+  "2028-07-17": "제헌절",
+  "2028-08-15": "광복절",
+  "2028-10-02": "추석 연휴",
+  "2028-10-03": "추석·개천절",
+  "2028-10-04": "추석 연휴",
+  "2028-10-05": "대체공휴일",
+  "2028-10-09": "한글날",
+  "2028-12-25": "성탄절",
+  "2029-01-01": "신정",
+  "2029-02-12": "설날 연휴",
+  "2029-02-13": "설날",
+  "2029-02-14": "설날 연휴",
+  "2029-03-01": "삼일절",
+  "2029-05-01": "노동절",
+  "2029-05-05": "어린이날",
+  "2029-05-07": "대체공휴일",
+  "2029-05-20": "부처님오신날",
+  "2029-05-21": "대체공휴일",
+  "2029-06-06": "현충일",
+  "2029-07-17": "제헌절",
+  "2029-08-15": "광복절",
+  "2029-09-21": "추석 연휴",
+  "2029-09-22": "추석",
+  "2029-09-23": "추석 연휴",
+  "2029-09-24": "대체공휴일",
+  "2029-10-03": "개천절",
+  "2029-10-09": "한글날",
+  "2029-12-25": "성탄절",
+  "2030-01-01": "신정",
+  "2030-02-02": "설날 연휴",
+  "2030-02-03": "설날",
+  "2030-02-04": "설날 연휴",
+  "2030-02-05": "대체공휴일",
+  "2030-03-01": "삼일절",
+  "2030-05-01": "노동절",
+  "2030-05-05": "어린이날",
+  "2030-05-06": "대체공휴일",
+  "2030-05-09": "부처님오신날",
+  "2030-06-06": "현충일",
+  "2030-07-17": "제헌절",
+  "2030-08-15": "광복절",
+  "2030-09-11": "추석 연휴",
+  "2030-09-12": "추석",
+  "2030-09-13": "추석 연휴",
+  "2030-10-03": "개천절",
+  "2030-10-09": "한글날",
+  "2030-12-25": "성탄절"
+});
+function holidayName(date){return KR_HOLIDAYS[date]||'';}
+function syncMonthControls(){
+  const y=month.getFullYear(), m=month.getMonth()+1;
+  const years=$('yearSelect'), months=$('monthSelect');
+  // Preserve access to the current year even after the configured range ends.
+  const min=Math.min(YEAR_MIN,y,new Date().getFullYear()),max=Math.max(YEAR_MAX,y,new Date().getFullYear());
+  if(years.dataset.range!==`${min}:${max}`){
+    years.replaceChildren(...Array.from({length:max-min+1},(_,i)=>new Option(`${min+i}년`,String(min+i))));
+    years.dataset.range=`${min}:${max}`;
+  }
+  if(!months.options.length)months.replaceChildren(...Array.from({length:12},(_,i)=>new Option(`${i+1}월`,String(i+1))));
+  years.value=String(y);months.value=String(m);
+  $('prevMonth').disabled=y===min&&m===1;
+  $('nextMonth').disabled=y===max&&m===12;
+  $('holidayNote').hidden=y<=2027&&y>=YEAR_MIN;
+  $('holidayNote').textContent=y>YEAR_MAX||y<YEAR_MIN?'이 연도의 공휴일 자료는 아직 추가되지 않았어요.':'공휴일 예상 자료 · 추후 지정되는 임시공휴일 및 선거일은 변경될 수 있어요.';
+}
 let user = null;
 let entries = [];
 let editingEventId = null;
@@ -448,7 +625,7 @@ function layoutWeekEvents(weekDates, rows) {
   return {bars,overflow,laneCount:bars.reduce((n,b)=>Math.max(n,b.lane+1),0)};
 }
 function renderCalendar() {
-  setText('monthTitle', `${month.getFullYear()}년 ${month.getMonth()+1}월`);
+  syncMonthControls();
   const cal=$('calendar');cal.replaceChildren();
   const start=new Date(month.getFullYear(),month.getMonth(),1);
   const days=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
@@ -467,7 +644,7 @@ function renderCalendar() {
       return list.find(p=>p.id===covers.get(date))||list[0]||null;
     });
     const hasPhoto=weekCovers.some(Boolean), hasOverflow=overflow.some(n=>n>0);
-    const rows=['28px',...Array(laneCount).fill('19px')];
+    const rows=[dates.some(d=>d&&holidayName(d))?'48px':'28px',...Array(laneCount).fill('19px')];
     const overflowRow=hasOverflow?rows.push('16px'):0;
     const photoRow=hasPhoto?rows.push('44px'):0;
     rows.push('minmax(5px,1fr)');
@@ -478,10 +655,15 @@ function renderCalendar() {
       const dayEntries=entries.filter(e=>onDate(e,date));
       const button=document.createElement('button');button.type='button';
       button.className='day'+(date===selected?' selected':'')+(date===dateKey(new Date())?' today':'')+(cover?' has-photo':'');
+      const holiday=holidayName(date);
+      if(col===0)button.classList.add('sunday');
+      if(col===6)button.classList.add('saturday');
+      if(holiday)button.classList.add('holiday');
       button.style.gridColumn=String(col+1);
-      button.setAttribute('aria-label',`${date} 일정 ${dayEntries.length}개${cover?', 사진 있음':''}${unreadCommentDates.has(date)?', 새 댓글':''}`);
+      button.setAttribute('aria-label',`${date}${holiday?' '+holiday:''} 일정 ${dayEntries.length}개${cover?', 사진 있음':''}${unreadCommentDates.has(date)?', 새 댓글':''}`);
       button.setAttribute('aria-pressed',String(date===selected));
-      const label=document.createElement('span');label.textContent=String(Number(date.slice(-2)));button.append(label);
+      const label=document.createElement('span');label.className='day-number';label.textContent=String(Number(date.slice(-2)));button.append(label);
+      if(holiday){const name=document.createElement('span');name.className='holiday-name';name.textContent=holiday;name.title=holiday;button.append(name);}
       if(unreadCommentDates.has(date)){
         const dot=document.createElement('span');dot.className='unread-comment-dot';dot.title='새 댓글';dot.setAttribute('aria-hidden','true');button.append(dot);
       }
@@ -1043,16 +1225,49 @@ $('commentForm').addEventListener('submit',addComment);
 $('logoutBtn').addEventListener('click',signOut);
 $('importBtn').addEventListener('click',importOld);
 $('refreshBtn').addEventListener('click',loadEvents);
-function moveMonth(delta) {
- if(!canLeaveDay())return;
- month=new Date(month.getFullYear(),month.getMonth()+delta,1);
- changeSelected(dateKey(month)); resetDayUI(); dateViewed=false;
+function navigateMonth(target,selectToday=false) {
+ const y=target.getFullYear(), m=target.getMonth();
+ const min=Math.min(YEAR_MIN,month.getFullYear(),new Date().getFullYear()), max=Math.max(YEAR_MAX,month.getFullYear(),new Date().getFullYear());
+ if(!Number.isFinite(target.getTime())||y<min||y>max){syncMonthControls();return false;}
+ if(y===month.getFullYear()&&m===month.getMonth()){
+   if(selectToday)openDay(dateKey(target));
+   syncMonthControls();return true;
+ }
+ if(!canLeaveDay()){syncMonthControls();return false;}
+ ++loadVersion;++unreadLoadVersion;unreadCommentDates.clear();
+ month=new Date(y,m,1);
+ changeSelected(dateKey(selectToday?target:month));resetDayUI();dateViewed=selectToday;
  entries=[];photos=[];covers.clear();++photoLoadVersion;
  journal=null;comments=[];journalDataDate='';journalReadyDate='';++journalLoadVersion;
- renderJournal();renderCalendar();renderEvents();renderPhotoGallery();loadEvents();
+ renderJournal();renderCalendar();renderEvents();renderPhotoGallery();loadEvents();return true;
 }
+function moveMonth(delta){return navigateMonth(new Date(month.getFullYear(),month.getMonth()+delta,1));}
 $('prevMonth').addEventListener('click',()=>moveMonth(-1));
 $('nextMonth').addEventListener('click',()=>moveMonth(1));
+$('yearSelect').addEventListener('change',e=>navigateMonth(new Date(Number(e.target.value),month.getMonth(),1)));
+$('monthSelect').addEventListener('change',e=>navigateMonth(new Date(month.getFullYear(),Number(e.target.value)-1,1)));
+$('todayMonth').addEventListener('click',()=>navigateMonth(new Date(),true));
+// Touch only: allow natural vertical scrolling and pinch zoom, cancel accidental date clicks.
+let swipeStart=null, suppressDayClickUntil=0;
+const swipeCalendar=$('calendar');
+swipeCalendar.addEventListener('touchstart',e=>{
+ if(e.touches.length!==1){swipeStart=null;return;}
+ const t=e.touches[0];swipeStart={id:t.identifier,x:t.clientX,y:t.clientY};
+},{passive:true});
+swipeCalendar.addEventListener('touchcancel',()=>{swipeStart=null;},{passive:true});
+swipeCalendar.addEventListener('touchend',e=>{
+ const start=swipeStart;swipeStart=null;
+ if(!start||e.touches.length)return;
+ const t=Array.from(e.changedTouches).find(t=>t.identifier===start.id);if(!t)return;
+ const dx=t.clientX-start.x,dy=t.clientY-start.y;
+ if(Math.abs(dx)<45||Math.abs(dx)<Math.abs(dy)*1.5)return;
+ if(e.cancelable)e.preventDefault();
+ suppressDayClickUntil=Date.now()+400;
+ moveMonth(dx<0?1:-1);
+},{passive:false});
+swipeCalendar.addEventListener('click',e=>{
+ if(e.detail!==0&&Date.now()<suppressDayClickUntil){e.preventDefault();e.stopImmediatePropagation();}
+},true);
 (async function start() {
  if (!window.supabase || typeof window.supabase.createClient !== 'function') {
    $('starting').innerHTML = '<h2>연결 오류</h2><p class="muted small">Supabase 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.</p>';
